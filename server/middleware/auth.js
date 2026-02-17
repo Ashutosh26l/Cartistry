@@ -39,6 +39,20 @@ export const requireAuthPage = (req, res, next) => {
   }
 };
 
+export const requireRetailerPage = (req, res, next) => {
+  if (!res.locals.currentUser) return res.redirect("/auth/login");
+  if (res.locals.currentUser.role === "retailer" || res.locals.currentUser.role === "admin") {
+    return next();
+  }
+  return res.status(403).render("error", { statusCode: 403, message: "Retailer access only" });
+};
+
+export const requireBuyerPage = (req, res, next) => {
+  if (!res.locals.currentUser) return res.redirect("/auth/login");
+  if (res.locals.currentUser.role === "buyer") return next();
+  return res.status(403).render("error", { statusCode: 403, message: "Buyer access only" });
+};
+
 export const attachCurrentUser = async (req, res, next) => {
   try {
     const token = extractToken(req);

@@ -80,6 +80,16 @@ app.get("/", async (req, res) => {
       return res.render("home");
     }
 
+    const userRole = res.locals.currentUser.role;
+    if (userRole === "buyer") {
+      const [featuredProducts, latestProducts] = await Promise.all([
+        Product.find({ isAvailable: true }).sort({ createdAt: -1 }).limit(6),
+        Product.find().sort({ createdAt: -1 }).limit(4),
+      ]);
+
+      return res.render("buyer_dashboard", { featuredProducts, latestProducts });
+    }
+
     const ownerFilter = { owner: req.user.id };
     const [totalProducts, inStockProducts, featuredProducts] = await Promise.all([
       Product.countDocuments(ownerFilter),

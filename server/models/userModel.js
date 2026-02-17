@@ -8,8 +8,8 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 6 },
     role: {
       type: String,
-      enum: ["retailer", "admin"],
-      default: "retailer",
+      enum: ["buyer", "retailer", "admin"],
+      default: "buyer",
     },
     cart: {
       type: [

@@ -37,9 +37,16 @@
             <nav class="flex items-center gap-3 sm:gap-5 text-sm font-medium">
               <a href="/" class="text-slate-700 hover:text-indigo-600">Home</a>
               <% if (currentUser) { %>
+              <% const isRetailer = currentUser.role === "retailer" || currentUser.role === "admin"; %>
+              <% const isBuyer = currentUser.role === "buyer"; %>
+              <% if (isRetailer) { %>
               <a href="/products/new" class="text-slate-700 hover:text-indigo-600">Add Product</a>
-              <a href="/products/allProducts" class="text-slate-700 hover:text-indigo-600">Products</a>
+              <a href="/products/allProducts" class="text-slate-700 hover:text-indigo-600">My Products</a>
+              <% } %>
+              <% if (isBuyer) { %>
+              <a href="/products/allProducts" class="text-slate-700 hover:text-indigo-600">Shop</a>
               <a href="/products/cart" class="text-slate-700 hover:text-indigo-600">Cart</a>
+              <% } %>
               <span class="text-slate-500 hidden sm:inline">Hi, <%= currentUser.name %></span>
               <form action="/auth/logout" method="post" class="inline">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

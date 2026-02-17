@@ -47,6 +47,10 @@ const normalizeUpdatePayload = (body) => {
 };
 
 const getOwnerFilter = (req) => ({ owner: req.user.id });
+const isRetailerRequest = (res) => {
+  const role = res.locals.currentUser?.role;
+  return role === "retailer" || role === "admin";
+};
 
 export const getProducts = async (req, res) => {
   try {
@@ -115,7 +119,7 @@ export const deleteProduct = async (req, res) => {
 export const getAllProductsPage = async (req, res) => {
   try {
     const { availability, q } = req.query;
-    const query = { ...getOwnerFilter(req) };
+    const query = isRetailerRequest(res) ? { ...getOwnerFilter(req) } : {};
 
     if (typeof availability !== "undefined") {
       query.isAvailable = availability === "true";
@@ -134,7 +138,9 @@ export const getAllProductsPage = async (req, res) => {
 export const getProductDetailPage = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findOne({ _id: id, ...getOwnerFilter(req) });
+    const product = isRetailerRequest(res)
+      ? await Product.findOne({ _id: id, ...getOwnerFilter(req) })
+      : await Product.findById(id);
 
     if (!product) {
       return res.status(404).render("product_detail", { product: null });
@@ -190,7 +196,7 @@ export const addProductReview = async (req, res) => {
     }
 
     const updatedProduct = await Product.findOneAndUpdate(
-      { _id: id, ...getOwnerFilter(req) },
+      { _id: id },
       {
         $push: {
           reviews: {

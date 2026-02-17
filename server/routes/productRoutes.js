@@ -14,25 +14,25 @@ import {
   updateCartItemQuantity,
   updateProductPage,
 } from "../controllers/productController.js";
-import { requireAuthPage } from "../middleware/auth.js";
+import { requireAuthPage, requireBuyerPage, requireRetailerPage } from "../middleware/auth.js";
 import { validateProduct, validateReview } from "../middleware/validation.js";
 
 const router = express.Router();
 
 router.use(requireAuthPage);
 
-router.get("/new", getAddProductPage);
-router.post("/new", validateProduct, createProductPage);
 router.get("/allProducts", getAllProductsPage);
-router.get("/edit/:id", getEditProductPage);
-router.post("/edit/:id", validateProduct, updateProductPage);
 router.post("/:id/reviews", validateReview, addProductReview);
-router.get("/cart", getCartPage);
-router.post("/:id/cart", addToCart);
-router.post("/:id/cart/update", updateCartItemQuantity);
-router.post("/:id/cart/remove", removeCartItem);
-router.get("/:id/buy-now", getBuyNowPage);
-router.post("/:id/buy-now", buyNow);
+router.get("/new", requireRetailerPage, getAddProductPage);
+router.post("/new", requireRetailerPage, validateProduct, createProductPage);
+router.get("/edit/:id", requireRetailerPage, getEditProductPage);
+router.post("/edit/:id", requireRetailerPage, validateProduct, updateProductPage);
+router.get("/cart", requireBuyerPage, getCartPage);
+router.post("/:id/cart", requireBuyerPage, addToCart);
+router.post("/:id/cart/update", requireBuyerPage, updateCartItemQuantity);
+router.post("/:id/cart/remove", requireBuyerPage, removeCartItem);
+router.get("/:id/buy-now", requireBuyerPage, getBuyNowPage);
+router.post("/:id/buy-now", requireBuyerPage, buyNow);
 router.get("/:id", getProductDetailPage);
 
 export default router;

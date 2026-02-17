@@ -13,9 +13,12 @@
 
 <section class="min-h-screen p-8">
   <div class="max-w-6xl mx-auto">
+    <% const isRetailer = currentUser && (currentUser.role === "retailer" || currentUser.role === "admin"); %>
     <div class="mb-8 flex items-center justify-between gap-4">
-      <h1 class="text-3xl font-bold text-gray-900 text-center">Our Products</h1>
+      <h1 class="text-3xl font-bold text-gray-900 text-center"><%= isRetailer ? 'My Products' : 'Shop Products' %></h1>
+      <% if (isRetailer) { %>
       <a href="/products/new" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5">Add Product</a>
+      <% } %>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

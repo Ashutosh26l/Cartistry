@@ -4,6 +4,7 @@ import User from "../models/userModel.js";
 const signToken = (userId) =>
   jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "1d" });
 const wantsHtml = (req) => req.headers.accept && req.headers.accept.includes("text/html");
+const getRoleFromEmail = (email) => (/@tri\.com$/i.test(String(email || "").trim()) ? "retailer" : "buyer");
 
 export const renderRegisterPage = (req, res) => {
   return res.render("register", { error: null, form: {} });
@@ -15,7 +16,7 @@ export const renderLoginPage = (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
       if (wantsHtml(req)) {
@@ -26,6 +27,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "name, email and password are required" });
     }
 
+    const normalizedEmail = String(email).toLowerCase().trim();
     const existingUser = await User.findOne({ email: String(email).toLowerCase().trim() });
     if (existingUser) {
       if (wantsHtml(req)) {
@@ -36,9 +38,9 @@ export const register = async (req, res) => {
 
     const user = await User.create({
       name: String(name).trim(),
-      email: String(email).toLowerCase().trim(),
+      email: normalizedEmail,
       password: String(password),
-      role: role || "retailer",
+      role: getRoleFromEmail(normalizedEmail),
     });
 
     if (wantsHtml(req)) {
@@ -81,7 +83,8 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "email and password are required" });
     }
 
-    const user = await User.findOne({ email: String(email).toLowerCase().trim() });
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       if (wantsHtml(req)) {
         return res.status(401).render("login", { error: "Invalid email or password", form: req.body });
@@ -95,6 +98,12 @@ export const login = async (req, res) => {
         return res.status(401).render("login", { error: "Invalid email or password", form: req.body });
       }
       return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const computedRole = getRoleFromEmail(normalizedEmail);
+    if (user.role !== "admin" && user.role !== computedRole) {
+      user.role = computedRole;
+      await user.save();
     }
 
     const token = signToken(user._id.toString());

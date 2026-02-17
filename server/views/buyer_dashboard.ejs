@@ -1,0 +1,41 @@
+<%- include("partials/header", { title: "Shop Dashboard" }) %>
+
+<section class="relative overflow-hidden bg-gradient-to-br from-cyan-900 via-slate-900 to-indigo-900 text-white">
+  <div class="absolute -top-20 -right-16 w-72 h-72 rounded-full bg-cyan-400/20 blur-3xl"></div>
+  <div class="absolute -bottom-20 -left-16 w-72 h-72 rounded-full bg-indigo-400/20 blur-3xl"></div>
+  <div class="relative max-w-6xl mx-auto px-6 py-16">
+    <p class="uppercase tracking-[0.2em] text-cyan-200 text-xs">Buyer Area</p>
+    <h1 class="mt-4 text-4xl sm:text-5xl font-bold">Shop smarter, faster, and safer</h1>
+    <p class="mt-4 text-slate-200 text-lg">Find products, compare prices, and place your order in a few clicks.</p>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a href="/products/allProducts" class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors">Start Shopping</a>
+      <a href="/products/cart" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold px-6 py-3 rounded-lg transition-colors">Open Cart</a>
+    </div>
+  </div>
+</section>
+
+<section class="max-w-6xl mx-auto px-6 py-12">
+  <div class="flex items-center justify-between">
+    <h2 class="text-2xl font-bold text-slate-900">Featured Products</h2>
+    <a href="/products/allProducts" class="text-indigo-600 hover:text-indigo-500 font-medium">View all</a>
+  </div>
+  <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <% if (featuredProducts && featuredProducts.length) { %>
+    <% featuredProducts.forEach(function(item) { %>
+    <a href="/products/<%= item._id %>" class="group bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+      <div class="h-44 bg-gradient-to-br from-indigo-500 to-slate-700 overflow-hidden">
+        <img src="<%= item.image || '/mobile.jpg' %>" alt="<%= item.name %>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+      </div>
+      <div class="p-4">
+        <p class="font-semibold text-slate-900"><%= item.name %></p>
+        <p class="text-indigo-600 font-bold mt-2">&#8377; <%= item.price %></p>
+      </div>
+    </a>
+    <% }); %>
+    <% } else { %>
+    <p class="text-slate-500">No products available right now.</p>
+    <% } %>
+  </div>
+</section>
+
+<%- include("partials/footer") %>
