@@ -1,0 +1,89 @@
+<%- include("partials/header", { title: "Checkout" }) %>
+<% const p = product || {}; %>
+<% const f = formData || {}; %>
+<% const qty = Math.max(1, Number(f.quantity || 1)); %>
+<% const subtotal = Number(p.price || 0) * qty; %>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+  <h1 class="text-3xl font-bold text-slate-900 mb-6">Checkout</h1>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <form action="/products/<%= p._id %>/buy-now" method="POST" class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6 needs-validation" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+      <% if (typeof error !== "undefined" && error) { %>
+      <div class="rounded-lg border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3"><%= error %></div>
+      <% } %>
+
+      <div>
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Contact Details</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input type="text" name="fullName" required value="<%= f.fullName || '' %>" placeholder="Full Name" class="rounded-lg border border-slate-300 px-4 py-2.5 focus:border-indigo-500 outline-none" />
+          <input type="email" name="email" required value="<%= f.email || (currentUser ? currentUser.email : '') %>" placeholder="Email" class="rounded-lg border border-slate-300 px-4 py-2.5 focus:border-indigo-500 outline-none" />
+          <input type="tel" name="phone" required value="<%= f.phone || '' %>" placeholder="Mobile Number" class="rounded-lg border border-slate-300 px-4 py-2.5 focus:border-indigo-500 outline-none sm:col-span-2" />
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Delivery Address</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input type="text" name="addressLine1" required value="<%= f.addressLine1 || '' %>" placeholder="Flat, House no., Building" class="rounded-lg border border-slate-300 px-4 py-2.5 focus:border-indigo-500 outline-none sm:col-span-2" />
+          <input type="text" name="city" required value="<%= f.city || '' %>" placeholder="City" class="rounded-lg border border-slate-300 px-4 py-2.5 focus:border-indigo-500 outline-none" />
+          <input type="text" name="state" required value="<%= f.state || '' %>" placeholder="State" class="rounded-lg border border-slate-300 px-4 py-2.5 focus:border-indigo-500 outline-none" />
+          <input type="text" name="pincode" required value="<%= f.pincode || '' %>" placeholder="Pincode" class="rounded-lg border border-slate-300 px-4 py-2.5 focus:border-indigo-500 outline-none" />
+          <input type="number" name="quantity" min="1" max="<%= p.quantity || 1 %>" required value="<%= qty %>" placeholder="Quantity" class="rounded-lg border border-slate-300 px-4 py-2.5 focus:border-indigo-500 outline-none" />
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-lg font-semibold text-slate-900 mb-3">Payment Method</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <label class="rounded-lg border border-slate-300 p-3 flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="paymentMethod" value="cod" <%= (f.paymentMethod || 'cod') === 'cod' ? 'checked' : '' %> />
+            <span>Cash on Delivery</span>
+          </label>
+          <label class="rounded-lg border border-slate-300 p-3 flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="paymentMethod" value="upi" <%= f.paymentMethod === 'upi' ? 'checked' : '' %> />
+            <span>UPI</span>
+          </label>
+          <label class="rounded-lg border border-slate-300 p-3 flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="paymentMethod" value="card" <%= f.paymentMethod === 'card' ? 'checked' : '' %> />
+            <span>Card</span>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="w-full rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3 transition-colors">
+        Place your order
+      </button>
+    </form>
+
+    <aside class="lg:col-span-1">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sticky top-24">
+        <h3 class="text-lg font-bold text-slate-900">Order Summary</h3>
+        <div class="mt-4 flex items-center gap-3">
+          <img src="<%= p.image || '/mobile.jpg' %>" alt="<%= p.name %>" class="h-16 w-16 rounded-lg object-cover border border-slate-200" />
+          <div>
+            <p class="font-semibold text-slate-900"><%= p.name %></p>
+            <p class="text-sm text-slate-500">&#8377; <%= p.price %> x <%= qty %></p>
+          </div>
+        </div>
+        <div class="mt-4 space-y-2 text-sm">
+          <div class="flex items-center justify-between text-slate-600">
+            <span>Subtotal</span>
+            <span>&#8377; <%= subtotal %></span>
+          </div>
+          <div class="flex items-center justify-between text-slate-600">
+            <span>Shipping</span>
+            <span>Free</span>
+          </div>
+          <div class="border-t border-slate-200 pt-2 flex items-center justify-between">
+            <span class="font-semibold text-slate-900">Total</span>
+            <span class="text-xl font-bold text-indigo-700">&#8377; <%= subtotal %></span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<%- include("partials/footer") %>

@@ -39,6 +39,7 @@
               <% if (currentUser) { %>
               <a href="/products/new" class="text-slate-700 hover:text-indigo-600">Add Product</a>
               <a href="/products/allProducts" class="text-slate-700 hover:text-indigo-600">Products</a>
+              <a href="/products/cart" class="text-slate-700 hover:text-indigo-600">Cart</a>
               <span class="text-slate-500 hidden sm:inline">Hi, <%= currentUser.name %></span>
               <form action="/auth/logout" method="post" class="inline">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

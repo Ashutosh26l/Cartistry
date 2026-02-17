@@ -1,4 +1,5 @@
 import Product from "../models/productModel.js";
+import User from "../models/userModel.js";
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -229,5 +230,131 @@ export const createProductPage = async (req, res) => {
     return res.redirect("/products/allProducts");
   } catch (error) {
     return res.status(500).render("error", { statusCode: 500, message: "Unable to add product" });
+  }
+};
+
+export const addToCart = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product || !product.isAvailable || product.quantity <= 0) {
+      return res.status(400).redirect(`/products/${id}`);
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(401).redirect("/auth/login");
+
+    const existingIndex = user.cart.findIndex((item) => item.product.toString() === id);
+    if (existingIndex >= 0) {
+      user.cart[existingIndex].quantity += 1;
+    } else {
+      user.cart.push({ product: product._id, quantity: 1 });
+    }
+
+    await user.save();
+    return res.redirect("/products/cart");
+  } catch (error) {
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to add product to cart" });
+  }
+};
+
+export const getCartPage = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate("cart.product");
+    if (!user) return res.status(401).redirect("/auth/login");
+
+    const cartItems = (user.cart || []).filter((item) => item.product);
+    const total = cartItems.reduce(
+      (sum, item) => sum + Number(item.product.price || 0) * Number(item.quantity || 0),
+      0
+    );
+
+    return res.render("cart", { cartItems, total });
+  } catch (error) {
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to load cart" });
+  }
+};
+
+export const updateCartItemQuantity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(401).redirect("/auth/login");
+
+    const cartItem = user.cart.find((item) => item.product.toString() === id);
+    if (!cartItem) return res.redirect("/products/cart");
+
+    if (action === "increase") {
+      cartItem.quantity += 1;
+    } else {
+      cartItem.quantity = Math.max(1, Number(cartItem.quantity || 1) - 1);
+    }
+
+    await user.save();
+    return res.redirect("/products/cart");
+  } catch (error) {
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to update cart item" });
+  }
+};
+
+export const removeCartItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(401).redirect("/auth/login");
+
+    user.cart = (user.cart || []).filter((item) => item.product.toString() !== id);
+    await user.save();
+    return res.redirect("/products/cart");
+  } catch (error) {
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to remove cart item" });
+  }
+};
+
+export const getBuyNowPage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+
+    if (!product || !product.isAvailable || product.quantity <= 0) {
+      return res.status(400).redirect(`/products/${id}`);
+    }
+
+    return res.render("buy_now", { product, formData: {} });
+  } catch (error) {
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to load checkout page" });
+  }
+};
+
+export const buyNow = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    const quantity = Math.max(1, Number(req.body.quantity || 1));
+    const { fullName, email, phone, addressLine1, city, state, pincode, paymentMethod } = req.body;
+
+    if (!product || !product.isAvailable || product.quantity < quantity) {
+      return res.status(400).redirect(`/products/${id}`);
+    }
+
+    if (!fullName || !email || !phone || !addressLine1 || !city || !state || !pincode || !paymentMethod) {
+      return res.status(400).render("buy_now", {
+        product,
+        formData: req.body,
+        error: "Please fill all required checkout details",
+      });
+    }
+
+    product.quantity = Math.max(0, Number(product.quantity || 0) - quantity);
+    await product.save();
+
+    return res.render("order_success", {
+      message: `${product.name} purchased successfully`,
+      product,
+      quantity,
+    });
+  } catch (error) {
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to place order" });
   }
 };

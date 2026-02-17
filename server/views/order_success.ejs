@@ -1,0 +1,16 @@
+<%- include("partials/header", { title: "Order Success" }) %>
+
+<section class="max-w-3xl mx-auto px-6 py-14">
+  <div class="bg-white rounded-2xl shadow p-8 text-center">
+    <h1 class="text-3xl font-bold text-emerald-600">Order Placed</h1>
+    <p class="text-slate-700 mt-3"><%= message %></p>
+    <p class="text-slate-500 mt-2">Product: <strong><%= product.name %></strong></p>
+    <p class="text-slate-500 mt-1">Quantity: <strong><%= typeof quantity !== 'undefined' ? quantity : 1 %></strong></p>
+    <div class="mt-6 flex items-center justify-center gap-3">
+      <a href="/products/allProducts" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5">Continue Shopping</a>
+      <a href="/products/cart" class="rounded-lg border border-slate-300 hover:border-slate-500 text-slate-700 font-medium px-5 py-2.5">Go to Cart</a>
+    </div>
+  </div>
+</section>
+
+<%- include("partials/footer") %>
