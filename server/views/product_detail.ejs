@@ -5,6 +5,7 @@ isRetailer = currentUser && (currentUser.role === "retailer" || currentUser.role
 p.owner.toString() === currentUser._id.toString(); %>
 
 <section class="max-w-6xl mx-auto px-6 py-10">
+  <%- include("partials/flash") %>
   <div class="mb-6">
     <a
       href="/products/allProducts"
@@ -60,6 +61,12 @@ p.owner.toString() === currentUser._id.toString(); %>
             <p class="text-sm text-slate-500">Availability</p>
             <p class="text-lg font-semibold text-slate-900">
               <%= p.isAvailable ? 'In Stock' : 'Out of Stock' %>
+            </p>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-4">
+            <p class="text-sm text-slate-500">Stock Left</p>
+            <p class="text-lg font-semibold text-slate-900">
+              <%= typeof p.quantity === 'number' ? p.quantity : (p.isAvailable ? 'Available' : 0) %>
             </p>
           </div>
           <div class="bg-slate-50 rounded-lg p-4">

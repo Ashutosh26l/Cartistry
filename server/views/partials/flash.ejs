@@ -1,0 +1,11 @@
+<% if (success && success.length) { %>
+  <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+    <%= success[0] %>
+  </div>
+<% } %>
+
+<% if (error && error.length) { %>
+  <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-800">
+    <%= error[0] %>
+  </div>
+<% } %>

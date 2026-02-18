@@ -12,8 +12,17 @@ const parseAvailability = (value) => {
   return value === "true" || value === "on";
 };
 
+const getNormalizedQuantity = (value) => Math.max(0, toNumber(value, 0));
+const hasLegacyAvailability = (product) =>
+  (typeof product?.quantity === "undefined" || product?.quantity === null) && product?.isAvailable === true;
+const hasStock = (product) => getNormalizedQuantity(product?.quantity) > 0 || hasLegacyAvailability(product);
+const getAvailableQuantityForPurchase = (product) => {
+  if (hasLegacyAvailability(product)) return 1;
+  return getNormalizedQuantity(product?.quantity);
+};
+
 const normalizeCreatePayload = (body) => {
-  const quantity = Math.max(0, toNumber(body.quantity, 0));
+  const quantity = getNormalizedQuantity(body.quantity);
   return {
     name: body.name,
     description: body.description || "",
@@ -34,7 +43,10 @@ const normalizeUpdatePayload = (body) => {
   if (typeof body.dateCreated !== "undefined") payload.dateCreated = toNumber(body.dateCreated, Date.now());
   if (typeof body.warranty !== "undefined") payload.warranty = toNumber(body.warranty, 0);
   if (typeof body.price !== "undefined") payload.price = toNumber(body.price, 0);
-  if (typeof body.quantity !== "undefined") payload.quantity = Math.max(0, toNumber(body.quantity, 0));
+  if (typeof body.quantity !== "undefined") {
+    payload.quantity = getNormalizedQuantity(body.quantity);
+    payload.isAvailable = payload.quantity > 0;
+  }
   if (typeof body.image !== "undefined") payload.image = body.image;
 
   const isAvailable = parseAvailability(body.isAvailable);
@@ -128,7 +140,12 @@ export const getAllProductsPage = async (req, res) => {
       query.name = { $regex: String(q), $options: "i" };
     }
 
-    const allProducts = await Product.find(query).sort({ createdAt: -1 });
+    const allProductsRaw = await Product.find(query).sort({ createdAt: -1 });
+    const allProducts = allProductsRaw.map((item) => {
+      const product = item.toObject();
+      product.isAvailable = hasStock(product);
+      return product;
+    });
     return res.render("products", { allProducts });
   } catch (error) {
     return res.status(500).render("error", { statusCode: 500, message: "Unable to load products" });
@@ -145,8 +162,9 @@ export const getProductDetailPage = async (req, res) => {
     if (!product) {
       return res.status(404).render("product_detail", { product: null });
     }
-
-    return res.render("product_detail", { product });
+    const productView = product.toObject();
+    productView.isAvailable = hasStock(productView);
+    return res.render("product_detail", { product: productView });
   } catch (error) {
     return res.status(500).render("error", { statusCode: 500, message: "Unable to load product details" });
   }
@@ -178,9 +196,10 @@ export const updateProductPage = async (req, res) => {
 
     Object.assign(product, normalizeUpdatePayload(req.body));
     await product.save();
-
+    req.flash("success", "Product edited successfully");
     return res.redirect(`/products/${product._id}`);
   } catch (error) {
+    req.flash("error", "Product could not be edited");
     return res.status(500).render("error", { statusCode: 500, message: "Unable to update product" });
   }
 };
@@ -192,6 +211,7 @@ export const addProductReview = async (req, res) => {
     const parsedRating = Number(rating);
 
     if (!userName || !comment || Number.isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+      req.flash("error", "Please provide a valid review");
       return res.redirect(`/products/${id}`);
     }
 
@@ -210,8 +230,10 @@ export const addProductReview = async (req, res) => {
     );
 
     if (!updatedProduct) return res.status(403).send("Forbidden");
+    req.flash("success", "Review added successfully");
     return res.redirect(`/products/${id}`);
   } catch (error) {
+    req.flash("error", "Unable to add review");
     return res.status(500).render("error", { statusCode: 500, message: "Unable to add review" });
   }
 };
@@ -224,6 +246,7 @@ export const createProductPage = async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) {
+      req.flash("error", "Product name is required");
       return res.status(400).send("Product name is required");
     }
 
@@ -232,9 +255,10 @@ export const createProductPage = async (req, res) => {
       ...payload,
       owner: req.user.id,
     });
-
+    req.flash("success", "Product added successfully");
     return res.redirect("/products/allProducts");
   } catch (error) {
+    req.flash("error", "Product could not be added");
     return res.status(500).render("error", { statusCode: 500, message: "Unable to add product" });
   }
 };
@@ -243,7 +267,7 @@ export const addToCart = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await Product.findById(id);
-    if (!product || !product.isAvailable || product.quantity <= 0) {
+    if (!product || !hasStock(product)) {
       return res.status(400).redirect(`/products/${id}`);
     }
 
@@ -323,7 +347,7 @@ export const getBuyNowPage = async (req, res) => {
     const { id } = req.params;
     const product = await Product.findById(id);
 
-    if (!product || !product.isAvailable || product.quantity <= 0) {
+    if (!product || !hasStock(product)) {
       return res.status(400).redirect(`/products/${id}`);
     }
 
@@ -340,7 +364,8 @@ export const buyNow = async (req, res) => {
     const quantity = Math.max(1, Number(req.body.quantity || 1));
     const { fullName, email, phone, addressLine1, city, state, pincode, paymentMethod } = req.body;
 
-    if (!product || !product.isAvailable || product.quantity < quantity) {
+    const availableQuantity = getAvailableQuantityForPurchase(product);
+    if (!product || availableQuantity < quantity || availableQuantity <= 0) {
       return res.status(400).redirect(`/products/${id}`);
     }
 
@@ -352,13 +377,15 @@ export const buyNow = async (req, res) => {
       });
     }
 
-    product.quantity = Math.max(0, Number(product.quantity || 0) - quantity);
+    product.quantity = Math.max(0, availableQuantity - quantity);
+    product.isAvailable = product.quantity > 0;
     await product.save();
 
     return res.render("order_success", {
       message: `${product.name} purchased successfully`,
       product,
       quantity,
+      remainingQuantity: product.quantity,
     });
   } catch (error) {
     return res.status(500).render("error", { statusCode: 500, message: "Unable to place order" });

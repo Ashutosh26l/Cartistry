@@ -62,6 +62,9 @@
               <span class="text-xs px-2 py-1 rounded-full <%= item.isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' %>"><%= item.isAvailable ? 'In Stock' : 'Out' %></span>
             </div>
             <p class="text-indigo-600 font-bold mt-2">&#8377; <%= item.price %></p>
+            <p class="text-xs mt-2 <%= item.isAvailable ? 'text-emerald-700' : 'text-rose-700' %>">
+              Stock: <%= typeof item.quantity === "number" ? item.quantity : (item.isAvailable ? 'Available' : 0) %>
+            </p>
           </div>
         </a>
         <% }); %>

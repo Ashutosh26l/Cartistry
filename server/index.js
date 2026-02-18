@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import session from "express-session";
+import flash from "connect-flash";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import productRoutes from "./routes/productRoutes.js";
@@ -35,7 +37,21 @@ app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
 app.set("views", path.join(path.resolve(), "/views"));
 app.use(express.json());
-app.use(cookieParser());
+app.use(cookieParser("youneedabettersecret"));
+
+const configSession = {
+  secret: "keyboard cat",
+  resave: false,
+  saveUninitialized: true,
+};
+
+app.use(session(configSession));
+app.use(flash());
+app.use((req, res, next) => {
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  next();
+});
 app.use(
   cors({
     origin(origin, callback) {
@@ -69,6 +85,45 @@ app.use(
 );
 app.use(attachCurrentUser);
 app.use(ensureCsrfToken);
+
+app.get("/setcookie", (req, res) => {
+  res.cookie("mode", "light");
+  res.cookie("location", "delhi");
+  res.cookie("username", "samarth");
+  return res.send("sent you a cookie successfully");
+});
+
+app.get("/greet", (req, res) => {
+  const { username } = req.cookies;
+  return res.send(`hi bro ${username || "anonymous"} hope you r doing good`);
+});
+
+app.get("/getsignedcookie", (req, res) => {
+  res.cookie("earthquake", "aaya", { signed: true });
+  return res.send("cookie sent successfully");
+});
+
+app.get("/showsigned", (req, res) => {
+  return res.send(req.signedCookies);
+});
+
+app.get("/viewcount", (req, res) => {
+  if (req.session.count) req.session.count += 1;
+  else req.session.count = 1;
+
+  return res.send(`You visited counter ${req.session.count} times`);
+});
+
+app.get("/setname", (req, res) => {
+  req.session.username = "samarth vohra";
+  return res.redirect("/greet-session");
+});
+
+app.get("/greet-session", (req, res) => {
+  const { username = "anonymous" } = req.session;
+  return res.send(`hi from ${username}`);
+});
+
 app.use("/api/auth", authRateLimiter, authRoutes);
 app.use("/auth", verifyCsrfToken, authRoutes);
 app.use("/api/products", productApiRoutes);

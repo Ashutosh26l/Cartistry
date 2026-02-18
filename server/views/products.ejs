@@ -13,6 +13,7 @@
 
 <section class="min-h-screen p-8">
   <div class="max-w-6xl mx-auto">
+    <%- include("partials/flash") %>
     <% const isRetailer = currentUser && (currentUser.role === "retailer" || currentUser.role === "admin"); %>
     <div class="mb-8 flex items-center justify-between gap-4">
       <h1 class="text-3xl font-bold text-gray-900 text-center"><%= isRetailer ? 'My Products' : 'Shop Products' %></h1>
@@ -37,6 +38,9 @@
           <div>
             <h3 class="text-xl font-bold text-gray-900"><%= item.name %></h3>
             <p class="text-gray-500 mt-1">Warranty: <%= item.warranty %> years</p>
+            <p class="text-sm mt-1 <%= item.isAvailable ? 'text-emerald-700' : 'text-rose-700' %>">
+              Stock: <%= typeof item.quantity === "number" ? item.quantity : (item.isAvailable ? 'Available' : 0) %>
+            </p>
           </div>
 
           <div class="flex justify-between items-center">

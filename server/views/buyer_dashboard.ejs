@@ -29,6 +29,9 @@
       <div class="p-4">
         <p class="font-semibold text-slate-900"><%= item.name %></p>
         <p class="text-indigo-600 font-bold mt-2">&#8377; <%= item.price %></p>
+        <p class="text-xs mt-2 <%= item.isAvailable ? 'text-emerald-700' : 'text-rose-700' %>">
+          Stock: <%= typeof item.quantity === "number" ? item.quantity : (item.isAvailable ? 'Available' : 0) %>
+        </p>
       </div>
     </a>
     <% }); %>
