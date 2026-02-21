@@ -3,18 +3,166 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <title><%= typeof title !== 'undefined' ? title : 'Ecommerce' %></title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script>
+      (function () {
+        const storageKey = "theme";
+        const root = document.documentElement;
+        const savedTheme = localStorage.getItem(storageKey);
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const isDark = savedTheme ? savedTheme === "dark" : prefersDark;
+        root.classList.toggle("dark", isDark);
+        root.style.colorScheme = isDark ? "dark" : "light";
+      })();
+    </script>
+    <script defer src="/js/theme.js"></script>
     <script defer src="/js/search.js"></script>
     <script defer src="/js/bootstrap-validation.js"></script>
     <style>
+      :root {
+        --dm-bg: #020617;
+        --dm-surface: #0b1220;
+        --dm-surface-2: #0f172a;
+        --dm-surface-3: #111827;
+        --dm-text-strong: #f8fafc;
+        --dm-text: #dbe7ff;
+        --dm-text-muted: #9fb0cc;
+        --dm-border: #2b3a55;
+        --dm-accent: #7db3ff;
+        --dm-accent-strong: #9ec5ff;
+      }
       .site-shell {
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
       }
       .site-main {
         flex: 1;
+      }
+      html.dark body {
+        background-color: var(--dm-bg);
+        color: var(--dm-text);
+      }
+      html.dark h1,
+      html.dark h2,
+      html.dark h3,
+      html.dark h4,
+      html.dark h5,
+      html.dark h6 {
+        color: var(--dm-text-strong);
+      }
+      html.dark p,
+      html.dark li,
+      html.dark span,
+      html.dark label,
+      html.dark td,
+      html.dark th {
+        color: var(--dm-text);
+      }
+      html.dark a {
+        color: var(--dm-accent);
+      }
+      html.dark a:hover {
+        color: var(--dm-accent-strong);
+      }
+      html.dark .bg-white {
+        background-color: var(--dm-surface-2) !important;
+      }
+      html.dark .bg-white\/95 {
+        background-color: rgba(11, 18, 32, 0.92) !important;
+      }
+      html.dark .bg-slate-50 {
+        background-color: var(--dm-bg) !important;
+      }
+      html.dark .bg-slate-100 {
+        background-color: var(--dm-surface-3) !important;
+      }
+      html.dark .bg-slate-900 {
+        background-color: var(--dm-surface) !important;
+      }
+      html.dark .bg-indigo-50,
+      html.dark .bg-rose-50,
+      html.dark .bg-emerald-100 {
+        background-color: #142033 !important;
+      }
+      html.dark .text-slate-900 {
+        color: var(--dm-text-strong) !important;
+      }
+      html.dark .text-slate-700,
+      html.dark .text-slate-600,
+      html.dark .text-slate-500 {
+        color: var(--dm-text) !important;
+      }
+      html.dark .text-slate-400 {
+        color: var(--dm-text-muted) !important;
+      }
+      html.dark .text-gray-900 {
+        color: var(--dm-text-strong) !important;
+      }
+      html.dark .text-gray-500 {
+        color: var(--dm-text-muted) !important;
+      }
+      html.dark .text-indigo-700,
+      html.dark .text-indigo-600,
+      html.dark .text-indigo-200,
+      html.dark .text-indigo-100,
+      html.dark .text-cyan-200 {
+        color: var(--dm-accent-strong) !important;
+      }
+      html.dark .text-rose-600 {
+        color: #ff9aa7 !important;
+      }
+      html.dark .text-emerald-700,
+      html.dark .text-emerald-600 {
+        color: #86efac !important;
+      }
+      html.dark .text-yellow-400,
+      html.dark .text-amber-500 {
+        color: #fcd34d !important;
+      }
+      html.dark .border-slate-200,
+      html.dark .border-slate-300,
+      html.dark .border-slate-700 {
+        border-color: var(--dm-border) !important;
+      }
+      html.dark .border-rose-200,
+      html.dark .border-emerald-200 {
+        border-color: #3b4c68 !important;
+      }
+      html.dark input,
+      html.dark select,
+      html.dark textarea {
+        background-color: var(--dm-surface) !important;
+        color: var(--dm-text-strong) !important;
+        border-color: var(--dm-border) !important;
+      }
+      html.dark input::placeholder,
+      html.dark textarea::placeholder {
+        color: var(--dm-text-muted);
+      }
+      html.dark .hover\:text-indigo-600:hover {
+        color: var(--dm-accent-strong) !important;
+      }
+      html.dark .bg-indigo-600,
+      html.dark .bg-indigo-500,
+      html.dark .bg-indigo-400 {
+        background-color: #2f5eaa !important;
+      }
+      html.dark .hover\:bg-indigo-700:hover {
+        background-color: #3b6bb6 !important;
+      }
+      .theme-toggle {
+        border: 1px solid #cbd5e1;
+      }
+      html.dark .theme-toggle {
+        border-color: var(--dm-border);
+        color: var(--dm-text-strong);
+        background-color: var(--dm-surface);
       }
     </style>
   </head>
@@ -35,6 +183,15 @@
               <button class="rounded-r-lg bg-slate-900 text-white px-4 py-2">Search</button>
             </form>
             <nav class="flex items-center gap-3 sm:gap-5 text-sm font-medium">
+              <button
+                type="button"
+                class="theme-toggle rounded-md px-2.5 py-1.5 text-slate-700 hover:text-indigo-600 transition-colors"
+                data-theme-toggle
+                aria-label="Toggle dark mode"
+                title="Toggle dark mode"
+              >
+                Dark
+              </button>
               <a href="/" class="text-slate-700 hover:text-indigo-600">Home</a>
               <% if (currentUser) { %>
               <% const isRetailer = currentUser.role === "retailer" || currentUser.role === "admin"; %>
