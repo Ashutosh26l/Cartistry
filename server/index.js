@@ -18,12 +18,14 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5500;
+// Normalize origins so env-provided values and incoming request origins compare reliably.
 const normalizeOrigin = (origin) => String(origin || "").trim().replace(/\/$/, "");
 const allowedOrigins = (process.env.CORS_ORIGIN || `http://localhost:${PORT}`)
   .split(",")
   .map((item) => normalizeOrigin(item))
   .filter(Boolean);
 
+// Protect auth endpoints from brute-force requests.
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -39,6 +41,7 @@ app.set("views", path.join(path.resolve(), "/views"));
 app.use(express.json());
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
+// Session config used by express-session middleware.
 const configSession = {
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -52,6 +55,7 @@ app.use((req, res, next) => {
   res.locals.error = req.flash("error");
   next();
 });
+// Restrictive CORS with explicit production allow-list and localhost flexibility in development.
 app.use(
   cors({
     origin(origin, callback) {
@@ -83,9 +87,11 @@ app.use(
     contentSecurityPolicy: false,
   })
 );
+// Populate current user from session/JWT and make CSRF token available on safe requests.
 app.use(attachCurrentUser);
 app.use(ensureCsrfToken);
 
+// Utility/demo cookie and session routes.
 app.get("/setcookie", (req, res) => {
   res.cookie("mode", "light");
   res.cookie("location", "delhi");
@@ -124,11 +130,13 @@ app.get("/greet-session", (req, res) => {
   return res.send(`hi from ${username}`);
 });
 
+// Route groups: auth routes are CSRF-protected (and API auth is rate-limited).
 app.use("/api/auth", authRateLimiter, authRoutes);
 app.use("/auth", verifyCsrfToken, authRoutes);
 app.use("/api/products", productApiRoutes);
 app.use("/products", verifyCsrfToken, productRoutes);
 
+// Home route serves a role-based dashboard for logged-in users.
 app.get("/", async (req, res) => {
   try {
     if (!res.locals.currentUser) {
@@ -180,10 +188,12 @@ app.get("/api/health", (req, res) => {
   return res.status(200).json({ message: "Inventory API is running" });
 });
 
+// 404 handler for unmatched routes.
 app.use((req, res) => {
   return res.status(404).render("error", { statusCode: 404, message: "Page not found" });
 });
 
+// Centralized error handler.
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   return res.status(err?.statusCode || 500).render("error", {
@@ -193,6 +203,7 @@ app.use((err, req, res, next) => {
 });
 
 connectDb().then(() => {
+  // Start server only after database connection succeeds.
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
