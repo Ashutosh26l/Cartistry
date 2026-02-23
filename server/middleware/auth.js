@@ -62,7 +62,7 @@ export const attachCurrentUser = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select("name email role");
+    const user = await User.findById(decoded.userId).select("name email role wishlist");
     res.locals.currentUser = user || null;
     if (user) req.user = { id: user._id.toString() };
     return next();

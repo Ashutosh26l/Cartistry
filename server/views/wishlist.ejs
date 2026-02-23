@@ -1,0 +1,55 @@
+<%- include("partials/header", { title: "Wishlist" }) %>
+
+<section class="min-h-screen p-8">
+  <div class="max-w-6xl mx-auto">
+    <%- include("partials/flash") %>
+    <div class="mb-8 flex items-center justify-between gap-4">
+      <h1 class="text-3xl font-bold text-gray-900 text-center">My Wishlist</h1>
+      <a href="/products/allProducts" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5">Back to Shop</a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <% if (wishlistItems && wishlistItems.length > 0) { %>
+      <% wishlistItems.forEach(function(item) { %>
+      <% var imageSrc = '/mobile.jpg'; if (item.image) { imageSrc = item.image; } else if (item.name && item.name.toLowerCase().includes('bicycle')) { imageSrc = '/bicycle.jpg'; } else if (item.name && item.name.toLowerCase().includes('mobile')) { imageSrc = '/mobile.jpg'; } %>
+      <div class="relative bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all">
+        <form action="/products/<%= item._id %>/wishlist" method="POST" class="absolute top-3 left-3 z-10">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <input type="hidden" name="redirectTo" value="/products/wishlist" />
+          <button
+            type="submit"
+            aria-label="Remove from wishlist"
+            class="h-9 w-9 rounded-full border border-white/70 bg-white/90 text-rose-600 text-xl leading-none shadow flex items-center justify-center"
+          >
+            &#9829;
+          </button>
+        </form>
+        <a href="/products/<%= item._id %>" class="block">
+          <div class="relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center overflow-hidden">
+            <img src="<%= imageSrc %>" alt="<%= item.name %>" class="w-full h-full object-cover" />
+            <span class="absolute top-3 right-3 <%= item.isAvailable ? 'bg-green-500' : 'bg-red-500' %> text-white px-3 py-1 rounded-full text-sm font-medium">
+              <%= item.isAvailable ? 'Available' : 'Out of Stock' %>
+            </span>
+          </div>
+          <div class="p-5 space-y-4">
+            <div>
+              <h3 class="text-xl font-bold text-gray-900"><%= item.name %></h3>
+              <p class="text-gray-500 mt-1">Warranty: <%= item.warranty %> years</p>
+            </div>
+            <div class="flex justify-between items-center">
+              <p class="text-2xl font-bold text-gray-900">&#8377; <%= item.price %></p>
+            </div>
+          </div>
+        </a>
+      </div>
+      <% }); %>
+      <% } else { %>
+      <div class="text-center py-12">
+        <p class="text-gray-500 text-xl">Your wishlist is empty.</p>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<%- include("partials/footer") %>

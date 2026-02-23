@@ -203,6 +203,9 @@
               <% if (isBuyer) { %>
               <a href="/products/allProducts" class="text-slate-700 hover:text-indigo-600">Shop</a>
               <a href="/products/cart" class="text-slate-700 hover:text-indigo-600">Cart</a>
+              <a href="/products/wishlist" class="text-slate-700 hover:text-indigo-600">
+                Wishlist<% if (currentUser.wishlist && currentUser.wishlist.length) { %> (<%= currentUser.wishlist.length %>)<% } %>
+              </a>
               <% } %>
               <span class="text-slate-500 hidden sm:inline">Hi, <%= currentUser.name %></span>
               <form action="/auth/logout" method="post" class="inline">
