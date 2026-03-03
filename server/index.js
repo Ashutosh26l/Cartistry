@@ -188,6 +188,18 @@ app.get("/api/health", (req, res) => {
   return res.status(200).json({ message: "Inventory API is running" });
 });
 
+app.get("/help-center", (req, res) => {
+  return res.render("help_center");
+});
+
+app.get("/returns", (req, res) => {
+  return res.render("returns");
+});
+
+app.get("/shipping", (req, res) => {
+  return res.render("shipping");
+});
+
 // 404 handler for unmatched routes.
 app.use((req, res) => {
   return res.status(404).render("error", { statusCode: 404, message: "Page not found" });
