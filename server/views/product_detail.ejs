@@ -179,7 +179,7 @@ p.owner.toString() === currentUser._id.toString(); %>
           <button
             type="submit"
             aria-label="<%= p.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist' %>"
-            class="h-full min-h-[48px] px-4 rounded-lg border border-slate-300 hover:border-slate-500 text-2xl <%= p.isWishlisted ? 'text-rose-600' : 'text-slate-500' %>"
+            class="h-full min-h-[48px] px-4 rounded-lg border border-slate-300 bg-white hover:border-slate-500 hover:shadow-sm text-3xl leading-none transition-all <%= p.isWishlisted ? 'text-rose-600 ring-2 ring-rose-200' : 'text-slate-700' %>"
           >
             <%- p.isWishlisted ? '&#9829;' : '&#9825;' %>
           </button>
