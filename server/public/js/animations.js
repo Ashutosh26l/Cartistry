@@ -21,13 +21,29 @@
       const target = Number(el.getAttribute("data-counter-value") || 0);
       if (Number.isNaN(target)) return;
       const prefix = el.getAttribute("data-counter-prefix") || "";
+      const roundedTarget = Math.max(0, Math.round(target));
+      const formatValue = (value) => `${prefix}${Math.max(0, Math.round(value)).toLocaleString("en-IN")}`;
+      const finalText = formatValue(roundedTarget);
+
+      // Lock number width to prevent card jitter during animated count updates.
+      el.style.display = "inline-block";
+      el.style.whiteSpace = "nowrap";
+      el.style.minWidth = `${Math.max(finalText.length, 4)}ch`;
+      el.style.fontVariantNumeric = "tabular-nums";
+      el.style.fontFeatureSettings = '"tnum" 1, "lnum" 1';
+
       const value = { current: 0 };
+      el.textContent = formatValue(0);
       window.gsap.to(value, {
-        current: target,
-        duration: 1.1,
-        ease: "power1.out",
+        current: roundedTarget,
+        duration: 1.2,
+        ease: "power2.out",
+        snap: { current: 1 },
         onUpdate: () => {
-          el.textContent = `${prefix}${Math.round(value.current).toLocaleString("en-IN")}`;
+          el.textContent = formatValue(value.current);
+        },
+        onComplete: () => {
+          el.textContent = finalText;
         },
       });
     });
