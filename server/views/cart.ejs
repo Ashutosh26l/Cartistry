@@ -1,6 +1,7 @@
 <%- include("partials/header", { title: "Cart" }) %>
 
 <section class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+  <%- include("partials/flash") %>
   <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 p-6 sm:p-8 mb-8">
     <div class="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-indigo-400/20 blur-2xl"></div>
     <div class="absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-cyan-300/20 blur-2xl"></div>
@@ -43,7 +44,13 @@
                   <input type="hidden" name="action" value="increase" />
                   <button type="submit" class="h-8 w-8 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">+</button>
                 </form>
-                <form method="POST" action="/products/<%= item.product._id %>/cart/remove" class="inline-flex ml-2">
+                <form
+                  method="POST"
+                  action="/products/<%= item.product._id %>/cart/remove"
+                  class="inline-flex ml-2"
+                  data-confirm-message="Remove this item from cart?"
+                  data-confirm-cta="Remove"
+                >
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                   <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-700">Remove</button>
                 </form>
@@ -80,7 +87,13 @@
         <a href="/products/allProducts" class="mt-5 block w-full text-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 transition-colors">
           Continue Shopping
         </a>
-        <a href="/products/<%= cartItems[0].product._id %>/buy-now" class="mt-3 block w-full text-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 transition-colors">
+        <a
+          href="/products/<%= cartItems[0].product._id %>/buy-now"
+          class="mt-3 block w-full text-center rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 transition-colors"
+          data-smart-suggestion="Add ₹{{amount}} more for free delivery."
+          data-checkout-threshold="499"
+          data-current-total="<%= total %>"
+        >
           Proceed to Checkout
         </a>
       </div>

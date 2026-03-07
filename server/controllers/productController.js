@@ -229,11 +229,29 @@ export const updateProductPage = async (req, res) => {
 
     Object.assign(product, normalizeUpdatePayload(req.body));
     await product.save();
-    req.flash("success", "Product edited successfully");
+    req.flash("success", "Product updated successfully.");
     return res.redirect(`/products/${product._id}`);
   } catch (error) {
     req.flash("error", "Product could not be edited");
     return res.status(500).render("error", { statusCode: 500, message: "Unable to update product" });
+  }
+};
+
+export const deleteProductPage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findOne({ _id: id, ...getOwnerFilter(req) });
+    if (!product) {
+      req.flash("error", "Product not found");
+      return res.status(404).redirect("/products/allProducts");
+    }
+
+    await Product.deleteOne({ _id: id, ...getOwnerFilter(req) });
+    req.flash("success", "Product deleted successfully.");
+    return res.redirect("/products/allProducts");
+  } catch (error) {
+    req.flash("error", "Unable to delete product");
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to delete product" });
   }
 };
 
@@ -317,6 +335,7 @@ export const addToCart = async (req, res) => {
     }
 
     await user.save();
+    req.flash("success", "Added to cart.");
     return res.redirect("/products/cart");
   } catch (error) {
     return res.status(500).render("error", { statusCode: 500, message: "Unable to add product to cart" });
@@ -373,6 +392,7 @@ export const removeCartItem = async (req, res) => {
 
     user.cart = (user.cart || []).filter((item) => item.product.toString() !== id);
     await user.save();
+    req.flash("success", "Removed from cart.");
     return res.redirect(redirectPath);
   } catch (error) {
     return res.status(500).render("error", { statusCode: 500, message: "Unable to remove cart item" });

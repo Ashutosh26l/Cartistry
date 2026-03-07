@@ -22,6 +22,7 @@
     <script defer src="/js/theme.js"></script>
     <script defer src="/js/search.js"></script>
     <script defer src="/js/bootstrap-validation.js"></script>
+    <script defer src="/js/popup-ui.js"></script>
     <style>
       :root {
         --dm-bg: #020617;
@@ -235,7 +236,11 @@
       }
     </style>
   </head>
-  <body class="bg-slate-50 text-slate-900">
+  <body
+    class="bg-slate-50 text-slate-900"
+    data-authenticated="<%= currentUser ? 'true' : 'false' %>"
+    data-user-role="<%= currentUser ? currentUser.role : 'guest' %>"
+  >
     <div class="site-shell">
       <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div class="w-full site-gutter">
@@ -268,7 +273,13 @@
               </a>
               <% } %>
               <span class="text-slate-500 hidden sm:inline">Hi, <%= currentUser.name %></span>
-              <form action="/auth/logout" method="post" class="inline">
+              <form
+                action="/auth/logout"
+                method="post"
+                class="inline"
+                data-confirm-message="Logout now? You may lose unsaved changes."
+                data-confirm-cta="Logout"
+              >
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                 <button type="submit" class="text-slate-700 hover:text-indigo-600">Logout</button>
               </form>
@@ -289,6 +300,15 @@
               </button>
               <% } else { %>
               <a href="/auth/login" class="text-slate-700 hover:text-indigo-600">Login</a>
+              <button
+                type="button"
+                class="text-slate-700 hover:text-indigo-600"
+                data-requires-auth="true"
+                data-login-url="/auth/login"
+                data-permission-message="Please login to save wishlist."
+              >
+                Wishlist
+              </button>
               <a href="/auth/register" class="rounded-md bg-indigo-600 px-3 py-1.5 text-white hover:bg-indigo-700">Register</a>
               <button
                 type="button"

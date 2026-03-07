@@ -4,6 +4,7 @@ import {
   addProductReview,
   buyNow,
   createProductPage,
+  deleteProductPage,
   getCartPage,
   getBuyNowPage,
   getAddProductPage,
@@ -29,6 +30,7 @@ router.get("/new", requireRetailerPage, getAddProductPage);
 router.post("/new", requireRetailerPage, validateProduct, createProductPage);
 router.get("/edit/:id", requireRetailerPage, getEditProductPage);
 router.post("/edit/:id", requireRetailerPage, validateProduct, updateProductPage);
+router.post("/:id/delete", requireRetailerPage, deleteProductPage);
 router.get("/cart", requireBuyerPage, getCartPage);
 router.get("/wishlist", requireBuyerPage, getWishlistPage);
 router.post("/:id/cart", requireBuyerPage, addToCart);

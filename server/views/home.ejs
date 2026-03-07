@@ -11,6 +11,15 @@
     <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
       <a href="/auth/register" class="px-6 py-3 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700">Register</a>
       <a href="/auth/login" class="px-6 py-3 rounded-lg border border-slate-300 text-slate-800 font-semibold hover:border-slate-500">Login</a>
+      <button
+        type="button"
+        class="px-6 py-3 rounded-lg border border-rose-300 text-rose-700 font-semibold hover:border-rose-500"
+        data-requires-auth="true"
+        data-login-url="/auth/login"
+        data-permission-message="Please login to save wishlist."
+      >
+        Save Wishlist
+      </button>
     </div>
   </div>
 </section>
