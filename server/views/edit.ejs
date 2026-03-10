@@ -56,6 +56,27 @@ product || {}; %>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
+            <label class="block text-sm font-medium text-slate-700">Category</label>
+            <input
+              type="text"
+              name="category"
+              value="<%= p.category || '' %>"
+              class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Brand</label>
+            <input
+              type="text"
+              name="brand"
+              value="<%= p.brand || '' %>"
+              class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
             <label class="block text-sm font-medium text-slate-700"
               >Date Created (year or timestamp)</label
             >
@@ -126,6 +147,39 @@ product || {}; %>
           <div>
             <p class="block text-sm font-medium text-slate-700">Stock Status</p>
             <p class="mt-2 text-sm px-3 py-2 rounded-lg border border-slate-200 inline-block <%= p.stockStatus === 'In Stock' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' %>"><%= p.stockStatus || (p.isAvailable ? 'In Stock' : 'Out of Stock') %></p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Gallery Image URLs</label>
+          <textarea
+            name="galleryImages"
+            rows="3"
+            class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500"
+            placeholder="One URL per line or comma-separated."
+          ><%= Array.isArray(p.images) ? p.images.join('\n') : '' %></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Variant Sizes</label>
+            <input
+              type="text"
+              name="variantSizes"
+              value="<%= p.variants && Array.isArray(p.variants.sizes) ? p.variants.sizes.join(', ') : '' %>"
+              class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500"
+              placeholder="S, M, L"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Variant Colors</label>
+            <input
+              type="text"
+              name="variantColors"
+              value="<%= p.variants && Array.isArray(p.variants.colors) ? p.variants.colors.join(', ') : '' %>"
+              class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500"
+              placeholder="Black, Blue"
+            />
           </div>
         </div>
 

@@ -16,6 +16,8 @@ const reviewSchema = new mongoose.Schema(
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, required: false, default: "" },
+  category: { type: String, required: false, default: "", trim: true, index: true },
+  brand: { type: String, required: false, default: "", trim: true, index: true },
   dateCreated: { type: Number, required: true },
   warranty: { type: Number, required: true },
   price: { type: Number, required: true },
@@ -28,8 +30,15 @@ const productSchema = new mongoose.Schema({
   },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   image: { type: String, required: false },
+  images: { type: [String], default: [] },
+  variants: {
+    sizes: { type: [String], default: [] },
+    colors: { type: [String], default: [] },
+  },
   reviews: { type: [reviewSchema], default: [] },
 });
+
+productSchema.index({ name: "text", description: "text", category: "text", brand: "text" });
 
 productSchema.pre("validate", function setStockStatus() {
   const qty = Number(this.quantity || 0);

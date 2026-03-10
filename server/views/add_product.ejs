@@ -25,6 +25,17 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
+            <label class="block text-sm font-medium text-slate-700">Category</label>
+            <input type="text" name="category" class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500" placeholder="Electronics, Fashion, Grocery..." />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Brand</label>
+            <input type="text" name="brand" class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500" placeholder="Apple, Samsung, Nike..." />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
             <label class="block text-sm font-medium text-slate-700">Date Created (year or timestamp)</label>
             <input type="number" name="dateCreated" class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500" required />
           </div>
@@ -48,6 +59,27 @@
         <div>
           <label class="block text-sm font-medium text-slate-700">Image URL or Path</label>
           <input type="text" name="image" class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Gallery Image URLs</label>
+          <textarea
+            name="galleryImages"
+            rows="3"
+            class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500"
+            placeholder="Add one URL per line or comma-separated."
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Variant Sizes</label>
+            <input type="text" name="variantSizes" class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500" placeholder="S, M, L, XL" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Variant Colors</label>
+            <input type="text" name="variantColors" class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500" placeholder="Black, White, Blue" />
+          </div>
         </div>
 
         <div class="flex gap-3 pt-2">

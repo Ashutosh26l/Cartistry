@@ -8,6 +8,7 @@ const toNumber = (value, fallback = 0) => {
 
 const parseAvailability = (value) => {
   if (typeof value === "undefined") return undefined;
+  if (value === null || value === "") return undefined;
   if (typeof value === "boolean") return value;
   return value === "true" || value === "on";
 };
@@ -16,9 +17,98 @@ const getNormalizedQuantity = (value) => Math.max(0, toNumber(value, 0));
 const hasLegacyAvailability = (product) =>
   (typeof product?.quantity === "undefined" || product?.quantity === null) && product?.isAvailable === true;
 const hasStock = (product) => getNormalizedQuantity(product?.quantity) > 0 || hasLegacyAvailability(product);
+const LOW_STOCK_THRESHOLD = 5;
+const DEFAULT_PAGE_SIZE = 9;
+const MAX_PAGE_SIZE = 48;
+const ALLOWED_SORTS = new Set(["relevance", "newest", "price_asc", "price_desc", "name_asc", "name_desc"]);
+
 const getAvailableQuantityForPurchase = (product) => {
   if (hasLegacyAvailability(product)) return 1;
   return getNormalizedQuantity(product?.quantity);
+};
+
+const sanitizeList = (value) => {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  const output = [];
+  for (const rawItem of value) {
+    const item = String(rawItem || "").trim();
+    if (!item) continue;
+    const key = item.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(item);
+  }
+  return output;
+};
+
+const normalizeVariantsPayload = (variants) => {
+  const source = variants && typeof variants === "object" ? variants : {};
+  return {
+    sizes: sanitizeList(source.sizes),
+    colors: sanitizeList(source.colors),
+  };
+};
+
+const getImageFallback = (product) => {
+  if (product?.image) return product.image;
+  const loweredName = String(product?.name || "").toLowerCase();
+  if (loweredName.includes("bicycle")) return "/bicycle.jpg";
+  return "/mobile.jpg";
+};
+
+const buildGalleryImages = (product) => {
+  const gallery = sanitizeList(product?.images);
+  const primary = String(product?.image || "").trim();
+  if (primary) {
+    const alreadyIncluded = gallery.some((image) => image.toLowerCase() === primary.toLowerCase());
+    if (!alreadyIncluded) gallery.unshift(primary);
+  }
+  if (gallery.length === 0) gallery.push(getImageFallback(product));
+  return gallery;
+};
+
+const getStockMeta = (product) => {
+  const quantity = getAvailableQuantityForPurchase(product);
+  const isAvailable = hasStock(product);
+  if (!isAvailable || quantity <= 0) {
+    return {
+      isAvailable: false,
+      quantity: 0,
+      label: "Out of Stock",
+      etaLabel: "Currently unavailable",
+    };
+  }
+  if (quantity <= LOW_STOCK_THRESHOLD) {
+    return {
+      isAvailable: true,
+      quantity,
+      label: "Low Stock",
+      etaLabel: "Delivery in 3-5 business days",
+    };
+  }
+  return {
+    isAvailable: true,
+    quantity,
+    label: "In Stock",
+    etaLabel: "Delivery in 2-4 business days",
+  };
+};
+
+const parsePositiveInt = (value, fallback, min, max) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+};
+
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const getQueryValue = (value) => {
+  if (Array.isArray(value)) {
+    const nonEmpty = value.map((item) => String(item || "").trim()).filter(Boolean);
+    if (nonEmpty.length > 0) return nonEmpty[nonEmpty.length - 1];
+    return "";
+  }
+  return String(value || "").trim();
 };
 
 const normalizeCreatePayload = (body) => {
@@ -26,11 +116,15 @@ const normalizeCreatePayload = (body) => {
   return {
     name: body.name,
     description: body.description || "",
+    category: String(body.category || "").trim(),
+    brand: String(body.brand || "").trim(),
     dateCreated: toNumber(body.dateCreated, Date.now()),
     warranty: toNumber(body.warranty, 0),
     price: toNumber(body.price, 0),
     quantity,
     image: body.image || "",
+    images: sanitizeList(body.images),
+    variants: normalizeVariantsPayload(body.variants),
     isAvailable: quantity > 0,
   };
 };
@@ -40,6 +134,8 @@ const normalizeUpdatePayload = (body) => {
 
   if (typeof body.name !== "undefined") payload.name = body.name;
   if (typeof body.description !== "undefined") payload.description = body.description;
+  if (typeof body.category !== "undefined") payload.category = String(body.category || "").trim();
+  if (typeof body.brand !== "undefined") payload.brand = String(body.brand || "").trim();
   if (typeof body.dateCreated !== "undefined") payload.dateCreated = toNumber(body.dateCreated, Date.now());
   if (typeof body.warranty !== "undefined") payload.warranty = toNumber(body.warranty, 0);
   if (typeof body.price !== "undefined") payload.price = toNumber(body.price, 0);
@@ -48,6 +144,8 @@ const normalizeUpdatePayload = (body) => {
     payload.isAvailable = payload.quantity > 0;
   }
   if (typeof body.image !== "undefined") payload.image = body.image;
+  if (typeof body.images !== "undefined") payload.images = sanitizeList(body.images);
+  if (typeof body.variants !== "undefined") payload.variants = normalizeVariantsPayload(body.variants);
 
   const isAvailable = parseAvailability(body.isAvailable);
   if (typeof isAvailable !== "undefined" && typeof payload.quantity === "undefined") {
@@ -67,6 +165,49 @@ const getSafeRedirectPath = (value, fallback) => {
   if (typeof value !== "string") return fallback;
   if (!value.startsWith("/products/")) return fallback;
   return value;
+};
+
+const getAvailabilityQuery = (availability) => {
+  const parsedAvailability = parseAvailability(availability);
+  if (typeof parsedAvailability === "undefined") return null;
+  const shouldBeAvailable = parsedAvailability === true;
+  const inStockQuery = {
+    $or: [
+      { quantity: { $gt: 0 } },
+      {
+        $and: [
+          {
+            $or: [{ quantity: { $exists: false } }, { quantity: null }],
+          },
+          { isAvailable: true },
+        ],
+      },
+    ],
+  };
+  if (shouldBeAvailable) return inStockQuery;
+  return { $nor: [inStockQuery] };
+};
+
+const getSortDefinition = (sort, hasQuery) => {
+  if (sort === "relevance" && hasQuery) return { score: { $meta: "textScore" } };
+  if (sort === "price_asc") return { price: 1, createdAt: -1 };
+  if (sort === "price_desc") return { price: -1, createdAt: -1 };
+  if (sort === "name_asc") return { name: 1, createdAt: -1 };
+  if (sort === "name_desc") return { name: -1, createdAt: -1 };
+  return { createdAt: -1 };
+};
+
+const toProductCardView = (item, wishlistedIds) => {
+  const product = item.toObject();
+  const stock = getStockMeta(product);
+  product.isAvailable = stock.isAvailable;
+  product.stockLabel = stock.label;
+  product.deliveryEta = stock.etaLabel;
+  product.stockQuantity = stock.quantity;
+  product.galleryImages = buildGalleryImages(product);
+  product.primaryImage = product.galleryImages[0];
+  product.isWishlisted = wishlistedIds.has(product._id.toString());
+  return product;
 };
 
 const calculateShipping = (subtotal) => {
@@ -152,29 +293,99 @@ export const deleteProduct = async (req, res) => {
 
 export const getAllProductsPage = async (req, res) => {
   try {
-    const { availability, q } = req.query;
-    const query = isRetailerRequest(res) ? { ...getOwnerFilter(req) } : {};
+    const baseQuery = isRetailerRequest(res) ? { ...getOwnerFilter(req) } : {};
+    const q = getQueryValue(req.query.q);
+    const category = getQueryValue(req.query.category);
+    const brand = getQueryValue(req.query.brand);
+    const minPriceRaw = req.query.minPrice;
+    const maxPriceRaw = req.query.maxPrice;
+    const minPrice = toNumber(minPriceRaw, NaN);
+    const maxPrice = toNumber(maxPriceRaw, NaN);
+    const availability = getQueryValue(req.query.availability);
+    const page = parsePositiveInt(req.query.page, 1, 1, 100000);
+    const limit = parsePositiveInt(req.query.limit, DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE);
+    const sortRaw = String(req.query.sort || "").trim();
+    let sort = ALLOWED_SORTS.has(sortRaw) ? sortRaw : q ? "relevance" : "newest";
+    if (!q && sort === "relevance") sort = "newest";
 
-    if (typeof availability !== "undefined") {
-      query.isAvailable = availability === "true";
+    const filters = [];
+    if (category) filters.push({ category: new RegExp(`^${escapeRegex(category)}$`, "i") });
+    if (brand) filters.push({ brand: new RegExp(`^${escapeRegex(brand)}$`, "i") });
+
+    if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
+      const priceFilter = {};
+      if (Number.isFinite(minPrice)) priceFilter.$gte = Math.max(0, minPrice);
+      if (Number.isFinite(maxPrice)) priceFilter.$lte = Math.max(0, maxPrice);
+      filters.push({ price: priceFilter });
     }
+
+    const availabilityQuery = getAvailabilityQuery(availability);
+    if (availabilityQuery) filters.push(availabilityQuery);
+
     if (q) {
-      query.name = { $regex: String(q), $options: "i" };
+      const pattern = new RegExp(escapeRegex(q), "i");
+      filters.push({
+        $or: [
+          { name: pattern },
+          { description: pattern },
+          { category: pattern },
+          { brand: pattern },
+        ],
+      });
     }
 
-    const allProductsRaw = await Product.find(query).sort({ createdAt: -1 });
+    const query = { ...baseQuery };
+    if (filters.length > 0) query.$and = filters;
+
+    const sortDefinition = getSortDefinition(sort, Boolean(q));
+    const skip = (page - 1) * limit;
+    let [allProductsRaw, totalItems, allCategories, allBrands] = await Promise.all([
+      Product.find(query).sort(sortDefinition).skip(skip).limit(limit),
+      Product.countDocuments(query),
+      Product.distinct("category", baseQuery),
+      Product.distinct("brand", baseQuery),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const currentPage = Math.min(page, totalPages);
+    if (currentPage !== page && totalItems > 0) {
+      const correctedSkip = (currentPage - 1) * limit;
+      allProductsRaw = await Product.find(query).sort(sortDefinition).skip(correctedSkip).limit(limit);
+    }
     let wishlistedIds = new Set();
     if (res.locals.currentUser?.role === "buyer") {
       const user = await User.findById(req.user.id).select("wishlist");
       wishlistedIds = new Set((user?.wishlist || []).map((productId) => productId.toString()));
     }
-    const allProducts = allProductsRaw.map((item) => {
-      const product = item.toObject();
-      product.isAvailable = hasStock(product);
-      product.isWishlisted = wishlistedIds.has(product._id.toString());
-      return product;
+    const allProducts = allProductsRaw.map((item) => toProductCardView(item, wishlistedIds));
+
+    const selectedFilters = {
+      q,
+      category,
+      brand,
+      minPrice: Number.isFinite(minPrice) ? String(Math.max(0, minPrice)) : "",
+      maxPrice: Number.isFinite(maxPrice) ? String(Math.max(0, maxPrice)) : "",
+      availability,
+      sort,
+      limit,
+    };
+
+    return res.render("products", {
+      allProducts,
+      categories: sanitizeList(allCategories),
+      brands: sanitizeList(allBrands),
+      selectedFilters,
+      pagination: {
+        totalItems,
+        totalPages,
+        page: currentPage,
+        limit,
+        hasPrev: currentPage > 1,
+        hasNext: currentPage < totalPages,
+        prevPage: Math.max(1, currentPage - 1),
+        nextPage: Math.min(totalPages, currentPage + 1),
+      },
     });
-    return res.render("products", { allProducts });
   } catch (error) {
     return res.status(500).render("error", { statusCode: 500, message: "Unable to load products" });
   }
@@ -188,10 +399,17 @@ export const getProductDetailPage = async (req, res) => {
       : await Product.findById(id);
 
     if (!product) {
-      return res.status(404).render("product_detail", { product: null });
+      return res.status(404).render("error", { statusCode: 404, message: "Product not found" });
     }
     const productView = product.toObject();
-    productView.isAvailable = hasStock(productView);
+    const stock = getStockMeta(productView);
+    productView.isAvailable = stock.isAvailable;
+    productView.stockLabel = stock.label;
+    productView.deliveryEta = stock.etaLabel;
+    productView.stockQuantity = stock.quantity;
+    productView.galleryImages = buildGalleryImages(productView);
+    productView.primaryImage = productView.galleryImages[0];
+    productView.variants = normalizeVariantsPayload(productView.variants);
     productView.isWishlisted = false;
     if (res.locals.currentUser?.role === "buyer") {
       const user = await User.findById(req.user.id).select("wishlist");

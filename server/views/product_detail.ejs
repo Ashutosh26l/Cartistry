@@ -1,46 +1,66 @@
-<%- include("partials/header", { title: "Product Details" }) %> <% const p =
-product || {}; %> <% const imageSrc = p.image || '/mobile.jpg'; %> <% const
-isRetailer = currentUser && (currentUser.role === "retailer" || currentUser.role
-=== "admin"); %> <% const showEdit = isRetailer && p.owner &&
-p.owner.toString() === currentUser._id.toString(); %>
+<%- include("partials/header", { title: "Product Details" }) %>
+<%
+const p = product || {};
+const gallery = Array.isArray(p.galleryImages) && p.galleryImages.length > 0 ? p.galleryImages : [p.image || '/mobile.jpg'];
+const isRetailer = currentUser && (currentUser.role === "retailer" || currentUser.role === "admin");
+const showEdit = isRetailer && p.owner && p.owner.toString() === currentUser._id.toString();
+const sizes = p.variants && Array.isArray(p.variants.sizes) ? p.variants.sizes : [];
+const colors = p.variants && Array.isArray(p.variants.colors) ? p.variants.colors : [];
+const hasVariantOptions = sizes.length > 0 || colors.length > 0;
+%>
+
+<style>
+  .zoom-pane {
+    transform: scale(1);
+    transform-origin: center center;
+    transition: transform 180ms ease;
+  }
+  .zoom-pane.is-zoomed {
+    transform: scale(1.8);
+    cursor: zoom-out;
+  }
+</style>
 
 <section class="max-w-6xl mx-auto py-10">
   <%- include("partials/flash") %>
   <div class="mb-6">
-    <a
-      href="/products/allProducts"
-      class="text-slate-600 hover:text-slate-900 font-medium"
-      >Back to Products</a
-    >
+    <a href="/products/allProducts" class="text-slate-600 hover:text-slate-900 font-medium">Back to Products</a>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
     <div>
       <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-        <div
-          class="relative h-96 bg-gradient-to-br from-indigo-500 to-purple-600"
-        >
+        <div class="relative h-96 bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden">
           <img
-            src="<%= imageSrc %>"
+            id="mainProductImage"
+            src="<%= gallery[0] %>"
+            data-default-image="<%= gallery[0] %>"
             alt="<%= p.name || 'Product' %>"
-            class="w-full h-full object-cover"
+            class="zoom-pane w-full h-full object-cover cursor-zoom-in"
           />
-          <span
-            class="absolute top-4 right-4 <%= p.isAvailable ? 'bg-green-500' : 'bg-red-500' %> text-white px-4 py-1 rounded-full text-sm font-medium"
-            ><%= p.isAvailable ? 'Available' : 'Out of Stock' %></span
-          >
+          <span class="absolute top-4 right-4 <%= p.isAvailable ? 'bg-green-500' : 'bg-red-500' %> text-white px-4 py-1 rounded-full text-sm font-medium">
+            <%= p.stockLabel || (p.isAvailable ? 'In Stock' : 'Out of Stock') %>
+          </span>
+        </div>
+        <div class="p-4 border-t">
+          <div class="grid grid-cols-5 gap-2">
+            <% gallery.forEach(function(image, index) { %>
+              <button
+                type="button"
+                class="gallery-thumb rounded-lg overflow-hidden border <%= index === 0 ? 'border-indigo-500 ring-2 ring-indigo-200' : 'border-slate-200' %>"
+                data-image="<%= image %>"
+                aria-label="View image <%= index + 1 %>"
+              >
+                <img src="<%= image %>" alt="Thumbnail <%= index + 1 %>" class="w-full h-16 object-cover" />
+              </button>
+            <% }); %>
+          </div>
         </div>
         <div class="p-5 border-t">
-          <h1 class="text-3xl font-bold text-slate-900">
-            <%= p.name || 'Product Name' %>
-          </h1>
+          <h1 class="text-3xl font-bold text-slate-900"><%= p.name || 'Product Name' %></h1>
           <div class="flex items-center justify-between mt-3">
-            <p class="text-3xl font-bold text-slate-900">
-              &#8377; <%= p.price || '0' %>
-            </p>
-            <span class="text-yellow-400 text-lg"
-              >&#9733;&#9733;&#9733;&#9733;&#9733;</span
-            >
+            <p class="text-3xl font-bold text-slate-900">&#8377; <%= p.price || '0' %></p>
+            <span class="text-yellow-400 text-lg">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
           </div>
           <p class="text-slate-500 mt-2">Inclusive of all taxes</p>
         </div>
@@ -52,43 +72,68 @@ p.owner.toString() === currentUser._id.toString(); %>
         <h2 class="text-lg font-semibold text-slate-900">Highlights</h2>
         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="bg-slate-50 rounded-lg p-4">
-            <p class="text-sm text-slate-500">Warranty</p>
-            <p class="text-lg font-semibold text-slate-900">
-              <%= p.warranty || 0 %> years
-            </p>
+            <p class="text-sm text-slate-500">Category</p>
+            <p class="text-lg font-semibold text-slate-900"><%= p.category || 'General' %></p>
           </div>
           <div class="bg-slate-50 rounded-lg p-4">
-            <p class="text-sm text-slate-500">Availability</p>
-            <p class="text-lg font-semibold text-slate-900">
-              <%= p.isAvailable ? 'In Stock' : 'Out of Stock' %>
-            </p>
+            <p class="text-sm text-slate-500">Brand</p>
+            <p class="text-lg font-semibold text-slate-900"><%= p.brand || 'Unbranded' %></p>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-4">
+            <p class="text-sm text-slate-500">Warranty</p>
+            <p class="text-lg font-semibold text-slate-900"><%= p.warranty || 0 %> years</p>
           </div>
           <div class="bg-slate-50 rounded-lg p-4">
             <p class="text-sm text-slate-500">Stock Left</p>
-            <p class="text-lg font-semibold text-slate-900">
-              <%= typeof p.quantity === 'number' ? p.quantity : (p.isAvailable ? 'Available' : 0) %>
-            </p>
+            <p class="text-lg font-semibold text-slate-900"><%= typeof p.stockQuantity === 'number' ? p.stockQuantity : (typeof p.quantity === 'number' ? p.quantity : 0) %></p>
           </div>
           <div class="bg-slate-50 rounded-lg p-4">
-            <p class="text-sm text-slate-500">Product ID</p>
-            <p class="text-sm sm:text-base font-semibold text-slate-900 break-all leading-relaxed">
-              <%= p._id || 'N/A' %>
-            </p>
+            <p class="text-sm text-slate-500">Stock Status</p>
+            <p class="text-lg font-semibold text-slate-900"><%= p.stockLabel || (p.isAvailable ? 'In Stock' : 'Out of Stock') %></p>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-4">
+            <p class="text-sm text-slate-500">Delivery ETA</p>
+            <p class="text-lg font-semibold text-slate-900"><%= p.deliveryEta || 'Delivery in 3-5 business days' %></p>
           </div>
         </div>
       </div>
 
       <div class="bg-white rounded-2xl shadow p-6">
         <h2 class="text-lg font-semibold text-slate-900">Description</h2>
-        <p class="text-slate-600 mt-2">
-          <%= p.description || 'No description available for this product.' %>
-        </p>
+        <p class="text-slate-600 mt-2"><%= p.description || 'No description available for this product.' %></p>
       </div>
+
+      <% if (hasVariantOptions) { %>
+      <div class="bg-white rounded-2xl shadow p-6">
+        <h2 class="text-lg font-semibold text-slate-900">Choose Options</h2>
+        <% if (sizes.length > 0) { %>
+          <div class="mt-4">
+            <p class="text-sm text-slate-500 mb-2">Size</p>
+            <div class="flex flex-wrap gap-2" data-variant-group="size">
+              <% sizes.forEach(function(size) { %>
+                <button type="button" class="variant-option rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:border-indigo-500" data-variant-type="size" data-variant-value="<%= size %>"><%= size %></button>
+              <% }); %>
+            </div>
+          </div>
+        <% } %>
+        <% if (colors.length > 0) { %>
+          <div class="mt-4">
+            <p class="text-sm text-slate-500 mb-2">Color</p>
+            <div class="flex flex-wrap gap-2" data-variant-group="color">
+              <% colors.forEach(function(color) { %>
+                <button type="button" class="variant-option rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:border-indigo-500" data-variant-type="color" data-variant-value="<%= color %>"><%= color %></button>
+              <% }); %>
+            </div>
+          </div>
+        <% } %>
+        <p id="variantValidationMessage" class="mt-4 text-sm text-rose-600 hidden">Please select required options before continuing.</p>
+      </div>
+      <% } %>
 
       <div class="bg-white rounded-2xl shadow p-6">
         <h2 class="text-lg font-semibold text-slate-900">Delivery & Returns</h2>
         <ul class="mt-3 text-slate-600 list-disc list-inside">
-          <li>Free delivery in 3-5 business days</li>
+          <li><%= p.deliveryEta || 'Delivery in 3-5 business days' %></li>
           <li>7-day replacement policy</li>
           <li>Secure packaging and tracking</li>
         </ul>
@@ -97,12 +142,7 @@ p.owner.toString() === currentUser._id.toString(); %>
       <div class="bg-white rounded-2xl shadow p-6">
         <h2 class="text-lg font-semibold text-slate-900">Customer Reviews</h2>
         <% if (currentUser && currentUser.role === "buyer") { %>
-        <form
-          class="mt-4 grid grid-cols-1 gap-3 needs-validation"
-          method="POST"
-          action="/products/<%= p._id %>/reviews"
-          novalidate
-        >
+        <form class="mt-4 grid grid-cols-1 gap-3 needs-validation" method="POST" action="/products/<%= p._id %>/reviews" novalidate>
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <select
             name="rating"
@@ -123,12 +163,7 @@ p.owner.toString() === currentUser._id.toString(); %>
             required
             class="w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500"
           ></textarea>
-          <button
-            type="submit"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors"
-          >
-            Submit Review
-          </button>
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition-colors">Submit Review</button>
         </form>
         <% } else if (showEdit) { %>
         <p class="mt-4 text-sm rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-indigo-800">
@@ -137,22 +172,16 @@ p.owner.toString() === currentUser._id.toString(); %>
         <% } %>
 
         <div class="mt-6 space-y-3">
-          <% if (p.reviews && p.reviews.length > 0) { %> <%
-          p.reviews.slice().reverse().forEach(function(review, reverseIndex) { %>
+          <% if (p.reviews && p.reviews.length > 0) { %>
+          <% p.reviews.slice().reverse().forEach(function(review, reverseIndex) { %>
           <% const reviewIndex = p.reviews.length - 1 - reverseIndex; %>
           <div class="border border-slate-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
               <p class="font-semibold text-slate-900"><%= review.userName || 'User' %></p>
-              <p class="text-sm text-amber-500">
-                <%= '★'.repeat(review.rating) %><%= '☆'.repeat(5 -
-                review.rating) %>
-              </p>
+              <p class="text-sm text-amber-500"><%= '\u2605'.repeat(review.rating) %><%= '\u2606'.repeat(5 - review.rating) %></p>
             </div>
             <p class="text-slate-600 mt-1"><%= review.comment %></p>
-            <p class="text-xs text-slate-400 mt-2">
-              <%= review.createdAt ? new Date(review.createdAt).toLocaleString()
-              : '' %>
-            </p>
+            <p class="text-xs text-slate-400 mt-2"><%= review.createdAt ? new Date(review.createdAt).toLocaleString() : '' %></p>
             <% if (review.retailerReply) { %>
             <div class="retailer-reply-box mt-3 rounded-lg border border-emerald-300 bg-emerald-100/90 px-3 py-2">
               <p class="retailer-reply-label text-xs font-semibold uppercase tracking-wide text-emerald-900">
@@ -175,27 +204,25 @@ p.owner.toString() === currentUser._id.toString(); %>
                 class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
                 placeholder="Write retailer reply"
               ><%= review.retailerReply || '' %></textarea>
-              <button
-                type="submit"
-                class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2"
-              >
+              <button type="submit" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2">
                 <%= review.retailerReply ? 'Update Reply' : 'Post Reply' %>
               </button>
             </form>
             <% } %>
           </div>
-          <% }); %> <% } else { %>
-          <p class="text-slate-500">
-            No reviews yet. Be the first to review this product.
-          </p>
+          <% }); %>
+          <% } else { %>
+          <p class="text-slate-500">No reviews yet. Be the first to review this product.</p>
           <% } %>
         </div>
       </div>
 
       <% if (!isRetailer) { %>
       <div class="flex gap-3">
-        <form class="flex-1" action="/products/<%= p._id %>/cart" method="POST">
+        <form class="flex-1 product-action-form" action="/products/<%= p._id %>/cart" method="POST">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <input type="hidden" name="selectedSize" class="selected-size-input" value="" />
+          <input type="hidden" name="selectedColor" class="selected-color-input" value="" />
           <button
             type="submit"
             data-animate-cta
@@ -205,13 +232,19 @@ p.owner.toString() === currentUser._id.toString(); %>
             Add to Cart
           </button>
         </form>
-        <a
-          href="/products/<%= p._id %>/buy-now?add=1"
-          data-animate-cta
-          class="flex-1 w-full text-center bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-lg transition-colors"
-        >
-          Buy Now
-        </a>
+        <form class="flex-1 product-action-form" action="/products/<%= p._id %>/buy-now" method="GET">
+          <input type="hidden" name="add" value="1" />
+          <input type="hidden" name="selectedSize" class="selected-size-input" value="" />
+          <input type="hidden" name="selectedColor" class="selected-color-input" value="" />
+          <button
+            type="submit"
+            data-animate-cta
+            class="w-full text-center bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-lg transition-colors"
+            <%= !p.isAvailable ? 'disabled' : '' %>
+          >
+            Buy Now
+          </button>
+        </form>
         <form action="/products/<%= p._id %>/wishlist" method="POST" class="shrink-0">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <input type="hidden" name="redirectTo" value="/products/<%= p._id %>" />
@@ -252,5 +285,93 @@ p.owner.toString() === currentUser._id.toString(); %>
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    const mainImage = document.getElementById("mainProductImage");
+    const thumbs = Array.from(document.querySelectorAll(".gallery-thumb"));
+    const variantButtons = Array.from(document.querySelectorAll(".variant-option"));
+    const actionForms = Array.from(document.querySelectorAll(".product-action-form"));
+    const variantError = document.getElementById("variantValidationMessage");
+    const requiresSize = <%= sizes.length > 0 ? "true" : "false" %>;
+    const requiresColor = <%= colors.length > 0 ? "true" : "false" %>;
+
+    let selectedSize = "";
+    let selectedColor = "";
+
+    const syncVariantInputs = () => {
+      document.querySelectorAll(".selected-size-input").forEach((input) => {
+        input.value = selectedSize;
+      });
+      document.querySelectorAll(".selected-color-input").forEach((input) => {
+        input.value = selectedColor;
+      });
+    };
+
+    const clearVariantError = () => {
+      if (!variantError) return;
+      variantError.classList.add("hidden");
+    };
+
+    if (mainImage) {
+      thumbs.forEach((button) => {
+        button.addEventListener("click", () => {
+          const image = button.getAttribute("data-image");
+          if (!image) return;
+          mainImage.src = image;
+          mainImage.classList.remove("is-zoomed");
+          thumbs.forEach((thumb) => {
+            thumb.classList.remove("border-indigo-500", "ring-2", "ring-indigo-200");
+            thumb.classList.add("border-slate-200");
+          });
+          button.classList.remove("border-slate-200");
+          button.classList.add("border-indigo-500", "ring-2", "ring-indigo-200");
+        });
+      });
+
+      mainImage.addEventListener("click", () => {
+        mainImage.classList.toggle("is-zoomed");
+      });
+    }
+
+    variantButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const type = button.getAttribute("data-variant-type");
+        const value = button.getAttribute("data-variant-value") || "";
+        if (type === "size") {
+          selectedSize = value;
+          document.querySelectorAll('[data-variant-type="size"]').forEach((item) => {
+            item.classList.remove("bg-indigo-600", "text-white", "border-indigo-600");
+            item.classList.add("border-slate-300", "text-slate-700");
+          });
+        } else if (type === "color") {
+          selectedColor = value;
+          document.querySelectorAll('[data-variant-type="color"]').forEach((item) => {
+            item.classList.remove("bg-indigo-600", "text-white", "border-indigo-600");
+            item.classList.add("border-slate-300", "text-slate-700");
+          });
+        }
+        button.classList.remove("border-slate-300", "text-slate-700");
+        button.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
+        syncVariantInputs();
+        clearVariantError();
+      });
+    });
+
+    actionForms.forEach((form) => {
+      form.addEventListener("submit", (event) => {
+        const missingSize = requiresSize && !selectedSize;
+        const missingColor = requiresColor && !selectedColor;
+        if (!missingSize && !missingColor) return;
+        event.preventDefault();
+        if (variantError) {
+          variantError.classList.remove("hidden");
+        }
+      });
+    });
+
+    syncVariantInputs();
+  })();
+</script>
 
 <%- include("partials/footer") %>

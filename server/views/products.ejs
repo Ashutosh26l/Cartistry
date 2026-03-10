@@ -1,6 +1,15 @@
 <%- include("partials/header", { title: "Products" }) %>
 
 <style>
+  .catalog-shell {
+    display: grid;
+    gap: 24px;
+  }
+  .filter-chip-active {
+    border-color: #2563eb;
+    background-color: #dbeafe;
+    color: #1d4ed8;
+  }
   .product-image {
     transition: transform 450ms ease;
     transform-origin: center;
@@ -9,29 +18,207 @@
   .product-image-wrap:hover .product-image {
     transform: scale(1.08);
   }
+  @media (min-width: 1024px) {
+    .catalog-shell {
+      grid-template-columns: 320px minmax(0, 1fr);
+      align-items: start;
+    }
+  }
 </style>
+
+<%
+const isRetailer = currentUser && (currentUser.role === "retailer" || currentUser.role === "admin");
+const isBuyer = currentUser && currentUser.role === "buyer";
+const filters = selectedFilters || {};
+const pager = pagination || { page: 1, totalPages: 1, hasPrev: false, hasNext: false, prevPage: 1, nextPage: 1, totalItems: 0 };
+const queryForLink = (targetPage) => {
+  const params = new URLSearchParams();
+  if (filters.q) params.set("q", filters.q);
+  if (filters.category) params.set("category", filters.category);
+  if (filters.brand) params.set("brand", filters.brand);
+  if (filters.minPrice) params.set("minPrice", filters.minPrice);
+  if (filters.maxPrice) params.set("maxPrice", filters.maxPrice);
+  if (filters.availability) params.set("availability", filters.availability);
+  if (filters.sort) params.set("sort", filters.sort);
+  if (filters.limit) params.set("limit", String(filters.limit));
+  if (targetPage && targetPage > 1) params.set("page", String(targetPage));
+  const query = params.toString();
+  return query ? `/products/allProducts?${query}` : "/products/allProducts";
+};
+const currentQueryPath = queryForLink(pager.page || 1);
+%>
 
 <section class="min-h-screen py-8">
   <div class="max-w-6xl mx-auto">
     <%- include("partials/flash") %>
-    <% const isRetailer = currentUser && (currentUser.role === "retailer" || currentUser.role === "admin"); %>
-    <% const isBuyer = currentUser && currentUser.role === "buyer"; %>
     <div class="mb-8 flex items-center justify-between gap-4">
-      <h1 class="text-3xl font-bold text-gray-900 text-center"><%= isRetailer ? 'My Products' : 'Shop Products' %></h1>
+      <h1 class="text-3xl font-bold text-gray-900 text-center"><%= isRetailer ? "My Products" : "Shop Products" %></h1>
       <% if (isRetailer) { %>
       <a href="/products/new" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5">Add Product</a>
       <% } %>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="catalog-shell">
+      <aside class="lg:sticky lg:top-24">
+        <form action="/products/allProducts" method="get" class="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+            <div>
+              <p class="text-lg font-semibold text-slate-900">Filter</p>
+              <p class="text-xs text-slate-500">Refine your catalog view</p>
+            </div>
+            <a href="/products/allProducts" class="text-sm font-medium text-cyan-600 hover:text-cyan-700">Clear</a>
+          </div>
+
+          <div class="p-5 border-b border-slate-100">
+            <label class="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 mb-3">Search</label>
+            <input type="text" name="q" value="<%= filters.q || '' %>" placeholder="Search products..." class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:bg-white" />
+          </div>
+
+          <div class="filter-group border-b border-slate-100">
+            <button type="button" class="filter-group-toggle w-full flex items-center justify-between px-5 py-4 text-left">
+              <span class="font-semibold text-slate-900">Brand</span>
+              <span class="text-slate-400 text-xl leading-none">+</span>
+            </button>
+            <div class="filter-group-body px-5 pb-5">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 mb-4">
+                <select id="brandPreviewSelect" class="w-full bg-transparent text-sm text-slate-700 focus:outline-none">
+                  <option value="">All brands</option>
+                  <% (brands || []).forEach(function(option) { %>
+                    <option value="<%= option %>" <%= filters.brand === option ? 'selected' : '' %>><%= option %></option>
+                  <% }); %>
+                </select>
+              </div>
+              <div class="space-y-2 max-h-56 overflow-auto pr-1">
+                <% (brands || []).slice(0, 8).forEach(function(option) { %>
+                  <label class="flex items-center justify-between rounded-xl px-3 py-2 border <%= filters.brand === option ? 'border-cyan-400 bg-cyan-50 text-cyan-700' : 'border-transparent hover:border-slate-200 text-slate-700' %>">
+                    <span class="flex items-center gap-3">
+                      <input type="radio" name="brand" value="<%= option %>" class="h-4 w-4 accent-cyan-600" <%= filters.brand === option ? 'checked' : '' %> />
+                      <span class="text-sm font-medium"><%= option %></span>
+                    </span>
+                    <span class="text-xs text-slate-400"><%= option.length %></span>
+                  </label>
+                <% }); %>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-group border-b border-slate-100">
+            <button type="button" class="filter-group-toggle w-full flex items-center justify-between px-5 py-4 text-left">
+              <span class="font-semibold text-slate-900">Category</span>
+              <span class="text-slate-400 text-xl leading-none">+</span>
+            </button>
+            <div class="filter-group-body px-5 pb-5 hidden">
+              <div class="flex flex-wrap gap-2">
+                <label class="cursor-pointer">
+                  <input type="radio" name="category" value="" class="sr-only" <%= !filters.category ? 'checked' : '' %> />
+                  <span class="block rounded-full border px-4 py-2 text-sm <%= !filters.category ? 'filter-chip-active' : 'border-slate-200 text-slate-700' %>">All</span>
+                </label>
+                <% (categories || []).forEach(function(option) { %>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="category" value="<%= option %>" class="sr-only" <%= filters.category === option ? 'checked' : '' %> />
+                    <span class="block rounded-full border px-4 py-2 text-sm <%= filters.category === option ? 'filter-chip-active' : 'border-slate-200 text-slate-700' %>"><%= option %></span>
+                  </label>
+                <% }); %>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-group border-b border-slate-100">
+            <button type="button" class="filter-group-toggle w-full flex items-center justify-between px-5 py-4 text-left">
+              <span class="font-semibold text-slate-900">Price</span>
+              <span class="text-slate-400 text-xl leading-none">+</span>
+            </button>
+            <div class="filter-group-body px-5 pb-5 hidden">
+              <div class="h-20 rounded-2xl bg-[linear-gradient(180deg,rgba(34,211,238,0.12),rgba(255,255,255,0.03))] border border-cyan-100 mb-4 relative overflow-hidden">
+                <div class="absolute inset-x-4 bottom-5 h-1 rounded-full bg-cyan-100"></div>
+                <div class="absolute left-[18%] right-[22%] bottom-5 h-1 rounded-full bg-cyan-500"></div>
+                <div class="absolute left-[18%] bottom-[14px] h-4 w-4 rounded-full border-4 border-white bg-cyan-500 shadow"></div>
+                <div class="absolute right-[22%] bottom-[14px] h-4 w-4 rounded-full border-4 border-white bg-cyan-500 shadow"></div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <input type="number" min="0" name="minPrice" value="<%= filters.minPrice || '' %>" placeholder="Min" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:bg-white" />
+                <input type="number" min="0" name="maxPrice" value="<%= filters.maxPrice || '' %>" placeholder="Max" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:bg-white" />
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-group border-b border-slate-100">
+            <button type="button" class="filter-group-toggle w-full flex items-center justify-between px-5 py-4 text-left">
+              <span class="font-semibold text-slate-900">Availability</span>
+              <span class="text-slate-400 text-xl leading-none">+</span>
+            </button>
+            <div class="filter-group-body px-5 pb-5 hidden">
+              <div class="grid grid-cols-1 gap-2">
+                <label class="flex items-center gap-3 rounded-2xl border px-4 py-3 <%= !filters.availability ? 'border-cyan-400 bg-cyan-50 text-cyan-700' : 'border-slate-200 text-slate-700' %>">
+                  <input type="radio" name="availability" value="" class="h-4 w-4 accent-cyan-600" <%= !filters.availability ? 'checked' : '' %> />
+                  <span class="text-sm font-medium">All products</span>
+                </label>
+                <label class="flex items-center gap-3 rounded-2xl border px-4 py-3 <%= filters.availability === 'true' ? 'border-cyan-400 bg-cyan-50 text-cyan-700' : 'border-slate-200 text-slate-700' %>">
+                  <input type="radio" name="availability" value="true" class="h-4 w-4 accent-cyan-600" <%= filters.availability === 'true' ? 'checked' : '' %> />
+                  <span class="text-sm font-medium">In stock</span>
+                </label>
+                <label class="flex items-center gap-3 rounded-2xl border px-4 py-3 <%= filters.availability === 'false' ? 'border-cyan-400 bg-cyan-50 text-cyan-700' : 'border-slate-200 text-slate-700' %>">
+                  <input type="radio" name="availability" value="false" class="h-4 w-4 accent-cyan-600" <%= filters.availability === 'false' ? 'checked' : '' %> />
+                  <span class="text-sm font-medium">Out of stock</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-5 py-5 space-y-3">
+            <button type="submit" class="w-full rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3">Apply Filters</button>
+            <a href="/products/allProducts" class="block w-full rounded-2xl border border-slate-200 hover:border-slate-300 text-center text-slate-700 font-medium py-3">Reset</a>
+          </div>
+        </form>
+      </aside>
+
+      <div>
+        <form action="/products/allProducts" method="get" class="mb-5 rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
+          <input type="hidden" name="q" value="<%= filters.q || '' %>" />
+          <input type="hidden" name="category" value="<%= filters.category || '' %>" />
+          <input type="hidden" name="brand" value="<%= filters.brand || '' %>" />
+          <input type="hidden" name="minPrice" value="<%= filters.minPrice || '' %>" />
+          <input type="hidden" name="maxPrice" value="<%= filters.maxPrice || '' %>" />
+          <input type="hidden" name="availability" value="<%= filters.availability || '' %>" />
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Results</p>
+              <p class="mt-1 text-slate-700">Showing <span class="font-semibold text-slate-900"><%= allProducts.length %></span> of <span class="font-semibold text-slate-900"><%= pager.totalItems || 0 %></span> products</p>
+            </div>
+            <div class="flex flex-col gap-3 sm:flex-row">
+              <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <span class="text-sm font-medium text-slate-500">Sort</span>
+                <select name="sort" class="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none">
+                  <option value="relevance" <%= filters.sort === 'relevance' ? 'selected' : '' %>>Relevance</option>
+                  <option value="newest" <%= filters.sort === 'newest' ? 'selected' : '' %>>Newest</option>
+                  <option value="price_asc" <%= filters.sort === 'price_asc' ? 'selected' : '' %>>Price: Low to High</option>
+                  <option value="price_desc" <%= filters.sort === 'price_desc' ? 'selected' : '' %>>Price: High to Low</option>
+                  <option value="name_asc" <%= filters.sort === 'name_asc' ? 'selected' : '' %>>Name: A to Z</option>
+                  <option value="name_desc" <%= filters.sort === 'name_desc' ? 'selected' : '' %>>Name: Z to A</option>
+                </select>
+              </label>
+              <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <span class="text-sm font-medium text-slate-500">Show</span>
+                <select name="limit" class="bg-transparent text-sm font-semibold text-slate-800 focus:outline-none">
+                  <option value="9" <%= String(filters.limit) === '9' ? 'selected' : '' %>>9</option>
+                  <option value="12" <%= String(filters.limit) === '12' ? 'selected' : '' %>>12</option>
+                  <option value="24" <%= String(filters.limit) === '24' ? 'selected' : '' %>>24</option>
+                  <option value="48" <%= String(filters.limit) === '48' ? 'selected' : '' %>>48</option>
+                </select>
+              </label>
+              <button type="submit" class="rounded-2xl bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-semibold px-5 py-3">Update</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <% if (allProducts && allProducts.length > 0) { %>
       <% allProducts.forEach(function(item) { %>
-      <% var imageSrc = '/mobile.jpg'; if (item.image) { imageSrc = item.image; } else if (item.name && item.name.toLowerCase().includes('bicycle')) { imageSrc = '/bicycle.jpg'; } else if (item.name && item.name.toLowerCase().includes('mobile')) { imageSrc = '/mobile.jpg'; } %>
       <div class="relative bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all" data-animate-card>
         <% if (isBuyer) { %>
         <form action="/products/<%= item._id %>/wishlist" method="POST" class="absolute top-3 left-3 z-10">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <input type="hidden" name="redirectTo" value="/products/allProducts" />
+          <input type="hidden" name="redirectTo" value="<%= currentQueryPath %>" />
           <button
             type="submit"
             aria-label="<%= item.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist' %>"
@@ -42,39 +229,89 @@
         </form>
         <% } %>
         <a href="/products/<%= item._id %>" class="block">
-        <div class="product-image-wrap relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center overflow-hidden">
-          <img src="<%= imageSrc %>" alt="<%= item.name %>" class="product-image w-full h-full object-cover" />
-          <span class="absolute top-3 right-3 <%= item.isAvailable ? 'bg-green-500' : 'bg-red-500' %> text-white px-3 py-1 rounded-full text-sm font-medium">
-            <%= item.isAvailable ? 'Available' : 'Out of Stock' %>
-          </span>
-        </div>
-
-        <div class="p-5 space-y-4">
-          <div>
-            <h3 class="text-xl font-bold text-gray-900"><%= item.name %></h3>
-            <p class="text-gray-500 mt-1">Warranty: <%= item.warranty %> years</p>
-            <p class="text-sm mt-1 <%= item.isAvailable ? 'text-emerald-700' : 'text-rose-700' %>">
-              Stock: <%= typeof item.quantity === "number" ? item.quantity : (item.isAvailable ? 'Available' : 0) %>
-            </p>
+          <div class="product-image-wrap relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center overflow-hidden">
+            <img src="<%= item.primaryImage %>" alt="<%= item.name %>" class="product-image w-full h-full object-cover" />
+            <span class="absolute top-3 right-3 <%= item.isAvailable ? 'bg-green-500' : 'bg-red-500' %> text-white px-3 py-1 rounded-full text-sm font-medium">
+              <%= item.stockLabel || (item.isAvailable ? 'In Stock' : 'Out of Stock') %>
+            </span>
           </div>
 
-          <div class="flex justify-between items-center">
-            <p class="text-2xl font-bold text-gray-900">&#8377; <%= item.price %></p>
-            <div class="flex items-center gap-1"><span class="text-yellow-400">&#9733;&#9733;&#9733;&#9733;&#9733;</span></div>
-          </div>
+          <div class="p-5 space-y-4">
+            <div>
+              <h3 class="text-xl font-bold text-gray-900"><%= item.name %></h3>
+              <p class="text-gray-500 mt-1">Warranty: <%= item.warranty %> years</p>
+              <p class="text-gray-500 mt-1">Category: <%= item.category || 'General' %> &bull; Brand: <%= item.brand || 'Unbranded' %></p>
+              <p class="text-sm mt-1 <%= item.isAvailable ? 'text-emerald-700' : 'text-rose-700' %>">Stock: <%= typeof item.stockQuantity === "number" ? item.stockQuantity : 0 %></p>
+              <p class="text-sm mt-1 text-slate-500"><%= item.deliveryEta || '' %></p>
+            </div>
 
-          <span class="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors">View Details</span>
-        </div>
+            <div class="flex justify-between items-center">
+              <p class="text-2xl font-bold text-gray-900">&#8377; <%= item.price %></p>
+              <div class="flex items-center gap-1"><span class="text-yellow-400">&#9733;&#9733;&#9733;&#9733;&#9733;</span></div>
+            </div>
+
+            <span class="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors">View Details</span>
+          </div>
         </a>
       </div>
       <% }); %>
       <% } else { %>
       <div class="text-center py-12">
-        <p class="text-gray-500 text-xl">No products available.</p>
+        <p class="text-gray-500 text-xl">No products available with current filters.</p>
       </div>
       <% } %>
+        </div>
+
+        <div class="mt-8 flex items-center justify-center gap-2">
+          <a href="<%= queryForLink(pager.prevPage) %>" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 <%= pager.hasPrev ? 'hover:border-slate-500' : 'opacity-40 pointer-events-none' %>">Previous</a>
+          <span class="px-4 py-2 text-sm text-slate-600">Page <%= pager.page %> of <%= pager.totalPages %></span>
+          <a href="<%= queryForLink(pager.nextPage) %>" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 <%= pager.hasNext ? 'hover:border-slate-500' : 'opacity-40 pointer-events-none' %>">Next</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
+<script>
+  (function () {
+    const groups = document.querySelectorAll(".filter-group");
+    const brandPreviewSelect = document.getElementById("brandPreviewSelect");
+    const brandInputs = document.querySelectorAll('input[type="radio"][name="brand"]');
+
+    groups.forEach((group, index) => {
+      const toggle = group.querySelector(".filter-group-toggle");
+      const body = group.querySelector(".filter-group-body");
+      const icon = toggle ? toggle.querySelector("span:last-child") : null;
+      if (!toggle || !body) return;
+
+      const isOpenByDefault = index === 0;
+      body.classList.toggle("hidden", !isOpenByDefault);
+      if (icon) icon.textContent = isOpenByDefault ? "-" : "+";
+
+      toggle.addEventListener("click", () => {
+        const shouldOpen = body.classList.contains("hidden");
+        body.classList.toggle("hidden", !shouldOpen);
+        if (icon) icon.textContent = shouldOpen ? "-" : "+";
+      });
+    });
+
+    if (brandPreviewSelect && brandInputs.length > 0) {
+      brandPreviewSelect.addEventListener("change", () => {
+        const selectedValue = brandPreviewSelect.value;
+        brandInputs.forEach((input) => {
+          input.checked = input.value === selectedValue;
+        });
+      });
+
+      brandInputs.forEach((input) => {
+        input.addEventListener("change", () => {
+          if (!input.checked) return;
+          brandPreviewSelect.value = input.value;
+        });
+      });
+    }
+  })();
+</script>
+
 <%- include("partials/footer") %>
+
