@@ -11,7 +11,9 @@ import {
   getAllProductsPage,
   getWishlistPage,
   getEditProductPage,
+  getRetailerNotificationsPage,
   getProductDetailPage,
+  markRetailerNotificationRead,
   removeCartItem,
   replyToReview,
   toggleWishlist,
@@ -26,6 +28,8 @@ const router = express.Router();
 router.use(requireAuthPage);
 
 router.get("/allProducts", getAllProductsPage);
+router.get("/notifications", requireRetailerPage, getRetailerNotificationsPage);
+router.post("/notifications/:notificationId/read", requireRetailerPage, markRetailerNotificationRead);
 router.post("/:id/reviews", requireBuyerPage, validateReview, addProductReview);
 router.post("/:id/reviews/:reviewIndex/reply", requireRetailerPage, validateReviewReply, replyToReview);
 router.get("/new", requireRetailerPage, getAddProductPage);

@@ -196,6 +196,7 @@ const hasVariantOptions = sizes.length > 0 || colors.length > 0;
             <% if (showEdit) { %>
             <form class="mt-3 space-y-2" method="POST" action="/products/<%= p._id %>/reviews/<%= reviewIndex %>/reply">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input type="hidden" name="redirectTo" value="/products/<%= p._id %>" />
               <label class="text-sm font-medium text-slate-700">Reply to this review</label>
               <textarea
                 name="reply"

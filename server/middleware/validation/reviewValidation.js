@@ -9,6 +9,8 @@ export const reviewSchema = Joi.object({
 
 export const reviewReplySchema = Joi.object({
   reply: Joi.string().trim().min(2).required(),
+  notificationId: Joi.string().trim().optional(),
+  redirectTo: Joi.string().trim().optional(),
   _csrf: Joi.string().optional(),
 });
 

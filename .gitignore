@@ -3,3 +3,4 @@ node_modules
 package-lock.json
 js practice/abc.js
 encUllala
+server/scripts/backfillNotificationHistory.js

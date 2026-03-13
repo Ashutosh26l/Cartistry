@@ -1,0 +1,102 @@
+<%- include("partials/header", { title: "Retailer Notifications" }) %>
+
+<section class="max-w-6xl mx-auto py-10">
+  <%- include("partials/flash") %>
+
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <div>
+      <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Retailer Center</p>
+      <h1 class="text-3xl font-bold text-slate-900 mt-1">Review Notifications</h1>
+    </div>
+    <a href="/products/allProducts" class="text-indigo-600 hover:text-indigo-500 font-medium">Back to products</a>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-xl font-bold text-slate-900">Pending Replies</h2>
+        <span class="pending-count-badge rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold"><%= pendingNotifications.length %> pending</span>
+      </div>
+
+      <div class="mt-5 space-y-4">
+        <% if (pendingNotifications && pendingNotifications.length) { %>
+        <% pendingNotifications.forEach(function(item) { %>
+        <article class="rounded-xl border border-slate-200 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <p class="font-semibold text-slate-900"><%= item.productName %></p>
+            <span class="text-xs font-medium text-amber-600"><%= '\u2605'.repeat(item.rating) %><%= '\u2606'.repeat(5 - item.rating) %></span>
+          </div>
+          <p class="text-sm text-slate-600 mt-1">By <span class="font-medium"><%= item.buyerName %></span></p>
+          <p class="text-sm text-slate-700 mt-2"><%= item.comment %></p>
+          <p class="text-xs text-slate-400 mt-2"><%= item.reviewCreatedAt ? new Date(item.reviewCreatedAt).toLocaleString() : '' %></p>
+
+          <% if (item.reviewAvailable) { %>
+          <form method="POST" action="/products/<%= item.product %>/reviews/<%= item.reviewIndex %>/reply" class="mt-3 space-y-2">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="hidden" name="notificationId" value="<%= item._id %>" />
+            <input type="hidden" name="redirectTo" value="/products/notifications" />
+            <textarea
+              name="reply"
+              rows="2"
+              required
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+              placeholder="Reply to this review"
+            ></textarea>
+            <div class="flex items-center gap-2">
+              <button type="submit" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2">Post Reply</button>
+              <a href="/products/<%= item.product %>" class="rounded-lg border border-slate-300 hover:border-slate-500 text-slate-700 text-sm font-medium px-4 py-2">View Product</a>
+            </div>
+          </form>
+          <% } else { %>
+          <p class="mt-3 text-xs text-rose-600">Review not available. It may have been removed from product data.</p>
+          <% } %>
+
+          <% if (!item.isRead) { %>
+          <form method="POST" action="/products/notifications/<%= item._id %>/read" class="mt-2">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="hidden" name="redirectTo" value="/products/notifications" />
+            <button type="submit" class="text-xs text-slate-500 hover:text-slate-700">Mark as read</button>
+          </form>
+          <% } %>
+        </article>
+        <% }); %>
+        <% } else { %>
+        <p class="text-slate-500">No pending review notifications.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-slate-900">Notification History</h2>
+      <p class="text-sm text-slate-500 mt-1">Latest review alerts and replied threads.</p>
+
+      <div class="mt-5 space-y-3 max-h-[760px] overflow-auto pr-1">
+        <% if (historyNotifications && historyNotifications.length) { %>
+        <% historyNotifications.forEach(function(item) { %>
+        <article class="rounded-xl border border-slate-200 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-semibold text-slate-900"><%= item.productName %></p>
+            <span class="notification-history-status notification-history-status-<%= item.replied ? 'replied' : 'pending' %> text-xs <%= item.replied ? 'text-emerald-700' : 'text-amber-700' %>"><%= item.replied ? 'Replied' : 'Pending' %></span>
+          </div>
+          <p class="text-sm text-slate-600 mt-1">Buyer: <%= item.buyerName %></p>
+          <p class="text-sm text-slate-700 mt-2"><%= item.comment %></p>
+          <% if (item.reply) { %>
+          <div class="notification-history-reply-box mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2">
+            <p class="notification-history-reply-label text-xs font-semibold uppercase tracking-wide text-emerald-900">Your Reply</p>
+            <p class="notification-history-reply-text text-sm text-emerald-950 mt-1"><%= item.reply %></p>
+            <% if (item.repliedAt) { %>
+            <p class="notification-history-reply-time text-xs text-emerald-700 mt-1"><%= new Date(item.repliedAt).toLocaleString() %></p>
+            <% } %>
+          </div>
+          <% } %>
+        </article>
+        <% }); %>
+        <% } else { %>
+        <p class="text-slate-500">No notification history yet.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include("partials/footer") %>

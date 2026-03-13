@@ -16,6 +16,7 @@ import { sessionConfig } from "./config/session.js";
 import { authRateLimiter } from "./middleware/rateLimit.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandlers.js";
 import { attachFlashMessages } from "./middleware/flashMessages.js";
+import { attachRetailerNotificationCount } from "./middleware/retailerNotifications.js";
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use(
 );
 // Populate current user from session/JWT and make CSRF token available on safe requests.
 app.use(attachCurrentUser);
+app.use(attachRetailerNotificationCount);
 app.use(ensureCsrfToken);
 app.use(debugRoutes);
 // Route groups: auth routes are CSRF-protected (and API auth is rate-limited).
