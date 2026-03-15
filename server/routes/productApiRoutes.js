@@ -1,5 +1,5 @@
 import express from "express";
-import authMiddleware from "../middleware/auth.js";
+import authMiddleware, { requireRetailerApi } from "../middleware/auth.js";
 import {
   createProduct,
   deleteProduct,
@@ -10,7 +10,7 @@ import { validateProduct } from "../middleware/validation.js";
 
 const router = express.Router();
 
-router.use(authMiddleware);
+router.use(authMiddleware, requireRetailerApi);
 router.get("/", getProducts);
 router.post("/", validateProduct, createProduct);
 router.put("/:id", validateProduct, updateProduct);

@@ -233,8 +233,8 @@ const hasVariantOptions = sizes.length > 0 || colors.length > 0;
             Add to Cart
           </button>
         </form>
-        <form class="flex-1 product-action-form" action="/products/<%= p._id %>/buy-now" method="GET">
-          <input type="hidden" name="add" value="1" />
+        <form class="flex-1 product-action-form" action="/products/<%= p._id %>/buy-now/start" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <input type="hidden" name="selectedSize" class="selected-size-input" value="" />
           <input type="hidden" name="selectedColor" class="selected-color-input" value="" />
           <button

@@ -40,7 +40,9 @@ app.use(
 app.use(attachCurrentUser);
 app.use(attachRetailerNotificationCount);
 app.use(ensureCsrfToken);
-app.use(debugRoutes);
+if (process.env.NODE_ENV !== "production") {
+  app.use(debugRoutes);
+}
 // Route groups: auth routes are CSRF-protected (and API auth is rate-limited).
 app.use("/api/auth", authRateLimiter, authRoutes);
 app.use("/auth", authRateLimiter, verifyCsrfToken, authRoutes);

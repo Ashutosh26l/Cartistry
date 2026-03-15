@@ -16,6 +16,7 @@ import {
   markRetailerNotificationRead,
   removeCartItem,
   replyToReview,
+  startBuyNow,
   toggleWishlist,
   updateCartItemQuantity,
   updateProductPage,
@@ -43,6 +44,7 @@ router.post("/:id/cart", requireBuyerPage, addToCart);
 router.post("/:id/cart/update", requireBuyerPage, updateCartItemQuantity);
 router.post("/:id/cart/remove", requireBuyerPage, removeCartItem);
 router.post("/:id/wishlist", requireBuyerPage, toggleWishlist);
+router.post("/:id/buy-now/start", requireBuyerPage, startBuyNow);
 router.get("/:id/buy-now", requireBuyerPage, getBuyNowPage);
 router.post("/:id/buy-now", requireBuyerPage, buyNow);
 router.get("/:id", getProductDetailPage);

@@ -5,7 +5,6 @@ import { getAvailableQuantityForPurchase, getCheckoutPricing, hasStock } from ".
 export const getBuyNowPage = async (req, res) => {
   try {
     const { id } = req.params;
-    const shouldAddItem = req.query.add === "1";
     const product = await Product.findById(id);
 
     if (!product) {
@@ -21,19 +20,6 @@ export const getBuyNowPage = async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(401).redirect("/auth/login");
 
-    // Only add once when explicitly requested from product page.
-    // Redirect to clean URL so refresh does not add again.
-    if (shouldAddItem) {
-      const existingIndex = user.cart.findIndex((item) => item.product.toString() === id);
-      if (existingIndex >= 0) {
-        user.cart[existingIndex].quantity += 1;
-      } else {
-        user.cart.push({ product: product._id, quantity: 1 });
-      }
-      await user.save();
-      return res.redirect(`/products/${id}/buy-now`);
-    }
-
     const hydratedUser = await User.findById(req.user.id).populate("cart.product");
     const cartItems = (hydratedUser?.cart || []).filter((item) => item.product);
     const pricing = getCheckoutPricing(cartItems);
@@ -45,6 +31,36 @@ export const getBuyNowPage = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).render("error", { statusCode: 500, message: "Unable to load checkout page" });
+  }
+};
+
+export const startBuyNow = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product) {
+      req.flash("error", "Product not found");
+      return res.status(404).redirect("/products/allProducts");
+    }
+    if (!hasStock(product)) {
+      req.flash("error", "This product is out of stock");
+      return res.status(400).redirect(`/products/${id}`);
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(401).redirect("/auth/login");
+
+    const existingIndex = user.cart.findIndex((item) => item.product.toString() === id);
+    if (existingIndex >= 0) {
+      user.cart[existingIndex].quantity += 1;
+    } else {
+      user.cart.push({ product: product._id, quantity: 1 });
+    }
+
+    await user.save();
+    return res.redirect(`/products/${id}/buy-now`);
+  } catch (error) {
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to start checkout" });
   }
 };
 

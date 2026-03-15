@@ -41,6 +41,15 @@ export const requireRetailerPage = (req, res, next) => {
   return res.status(403).render("error", { statusCode: 403, message: "Retailer access only" });
 };
 
+export const requireRetailerApi = (req, res, next) => {
+  const role = res.locals.currentUser?.role;
+  if (!res.locals.currentUser) {
+    return res.status(401).json({ message: "Unauthorized: login required" });
+  }
+  if (role === "retailer" || role === "admin") return next();
+  return res.status(403).json({ message: "Forbidden: retailer access only" });
+};
+
 export const requireBuyerPage = (req, res, next) => {
   if (!res.locals.currentUser) return res.redirect("/auth/login");
   if (res.locals.currentUser.role === "buyer") return next();
