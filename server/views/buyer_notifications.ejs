@@ -1,0 +1,209 @@
+<%- include("partials/header", { title: "My Notifications" }) %>
+
+<section class="max-w-6xl mx-auto py-10">
+  <%- include("partials/flash") %>
+
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <div>
+      <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Buyer Center</p>
+      <h1 class="text-3xl font-bold text-slate-900 mt-1">Reply Notifications</h1>
+    </div>
+    <a href="/products/allProducts" class="text-indigo-600 hover:text-indigo-500 font-medium">Back to products</a>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-xl font-bold text-slate-900">New Replies</h2>
+        <span id="buyerNewRepliesBadge" class="pending-count-badge rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-semibold" data-count="<%= newReplyNotifications.length %>"><%= newReplyNotifications.length %> new</span>
+      </div>
+
+      <div id="buyerNewRepliesList" class="mt-5 space-y-4">
+        <% if (newReplyNotifications && newReplyNotifications.length) { %>
+        <% newReplyNotifications.forEach(function(item) { %>
+        <article class="buyer-new-reply-card rounded-xl border border-slate-200 p-4" data-notification-id="<%= item._id %>">
+          <div class="flex items-center justify-between gap-3">
+            <p class="font-semibold text-slate-900"><%= item.productName %></p>
+            <span class="text-xs text-slate-500"><%= item.repliedAt ? new Date(item.repliedAt).toLocaleString() : '' %></span>
+          </div>
+          <p class="text-sm text-slate-600 mt-1">Your review:</p>
+          <p class="text-sm text-slate-700 mt-1"><%= item.comment %></p>
+          <div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+            <p class="text-xs font-semibold uppercase tracking-wide text-indigo-900">Reply by <%= item.repliedBy || 'Retailer' %></p>
+            <p class="text-sm text-indigo-950 mt-1"><%= item.reply || 'Retailer replied to your review.' %></p>
+          </div>
+          <a href="/products/<%= item.product %>" class="mt-3 inline-block rounded-lg border border-slate-300 hover:border-slate-500 text-slate-700 text-sm font-medium px-4 py-2">View Product</a>
+        </article>
+        <% }); %>
+        <% } else { %>
+        <p id="buyerNewRepliesEmpty" class="text-slate-500">No new replies right now.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-slate-900">Conversation History</h2>
+      <p class="text-sm text-slate-500 mt-1">All retailer replies to your product reviews.</p>
+
+      <div id="buyerHistoryList" class="mt-5 space-y-3 max-h-[760px] overflow-auto pr-1">
+        <% if (historyNotifications && historyNotifications.length) { %>
+        <% historyNotifications.forEach(function(item) { %>
+        <article class="buyer-history-card rounded-xl border border-slate-200 p-4" data-notification-id="<%= item._id %>">
+          <div class="flex items-center justify-between gap-2">
+            <p class="font-semibold text-slate-900"><%= item.productName %></p>
+            <span class="text-xs text-slate-500"><%= item.repliedAt ? new Date(item.repliedAt).toLocaleString() : '' %></span>
+          </div>
+          <p class="text-sm text-slate-600 mt-1">Your review:</p>
+          <p class="text-sm text-slate-700 mt-1"><%= item.comment %></p>
+          <div class="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2">
+            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-900">Reply by <%= item.repliedBy || 'Retailer' %></p>
+            <p class="text-sm text-emerald-950 mt-1"><%= item.reply || 'Retailer replied to your review.' %></p>
+          </div>
+          <a href="/products/<%= item.product %>" class="mt-3 inline-block rounded-lg border border-slate-300 hover:border-slate-500 text-slate-700 text-sm font-medium px-4 py-2">View Product</a>
+        </article>
+        <% }); %>
+        <% } else { %>
+        <p id="buyerHistoryEmpty" class="text-slate-500">No conversation history yet.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    const buyerId = "<%= currentUser ? String(currentUser._id || '') : '' %>";
+    if (!buyerId) return;
+
+    const newRepliesList = document.getElementById("buyerNewRepliesList");
+    const historyList = document.getElementById("buyerHistoryList");
+    const newRepliesBadge = document.getElementById("buyerNewRepliesBadge");
+    const headerBadge = document.getElementById("buyerNotificationNavBadge");
+
+    const escapeHtml = (value) =>
+      String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const formatTime = (value) => {
+      if (!value) return "";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
+    };
+
+    const setNewRepliesCount = (countValue) => {
+      if (!newRepliesBadge) return;
+      const safeCount = Math.max(0, Number(countValue) || 0);
+      newRepliesBadge.setAttribute("data-count", String(safeCount));
+      newRepliesBadge.textContent = safeCount + " new";
+    };
+
+    const syncNewRepliesCount = () => {
+      if (!newRepliesList) return;
+      const cards = newRepliesList.querySelectorAll(".buyer-new-reply-card");
+      setNewRepliesCount(cards.length);
+    };
+
+    const clearHeaderUnreadBadge = () => {
+      if (!headerBadge) return;
+      headerBadge.setAttribute("data-count", "0");
+      headerBadge.textContent = "0";
+      headerBadge.classList.add("hidden");
+    };
+
+    const ensureNewRepliesEmpty = () => {
+      if (!newRepliesList) return;
+      const hasCard = newRepliesList.querySelector(".buyer-new-reply-card");
+      const emptyNode = document.getElementById("buyerNewRepliesEmpty");
+      if (hasCard && emptyNode) {
+        emptyNode.remove();
+        return;
+      }
+      if (!hasCard && !emptyNode) {
+        const text = document.createElement("p");
+        text.id = "buyerNewRepliesEmpty";
+        text.className = "text-slate-500";
+        text.textContent = "No new replies right now.";
+        newRepliesList.appendChild(text);
+      }
+    };
+
+    const ensureHistoryEmpty = () => {
+      if (!historyList) return;
+      const hasCard = historyList.querySelector(".buyer-history-card");
+      const emptyNode = document.getElementById("buyerHistoryEmpty");
+      if (hasCard && emptyNode) {
+        emptyNode.remove();
+        return;
+      }
+      if (!hasCard && !emptyNode) {
+        const text = document.createElement("p");
+        text.id = "buyerHistoryEmpty";
+        text.className = "text-slate-500";
+        text.textContent = "No conversation history yet.";
+        historyList.appendChild(text);
+      }
+    };
+
+    const buildCardMarkup = (notification) => {
+      const viewHref = notification.href || (notification.productId ? "/products/" + String(notification.productId) : "/products/my-notifications");
+      return [
+        '<div class="flex items-center justify-between gap-3">',
+        '<p class="font-semibold text-slate-900">' + escapeHtml(notification.productName || "Product unavailable") + "</p>",
+        '<span class="text-xs text-slate-500">' + escapeHtml(formatTime(notification.repliedAt || notification.createdAt)) + "</span>",
+        "</div>",
+        '<p class="text-sm text-slate-600 mt-1">Your review:</p>',
+        '<p class="text-sm text-slate-700 mt-1">' + escapeHtml(notification.comment || "Review unavailable") + "</p>",
+        '<div class="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2">',
+        '<p class="text-xs font-semibold uppercase tracking-wide text-emerald-900">Reply by ' + escapeHtml(notification.repliedBy || "Retailer") + "</p>",
+        '<p class="text-sm text-emerald-950 mt-1">' + escapeHtml(notification.reply || "Retailer replied to your review.") + "</p>",
+        "</div>",
+        '<a href="' + escapeHtml(viewHref) + '" class="mt-3 inline-block rounded-lg border border-slate-300 hover:border-slate-500 text-slate-700 text-sm font-medium px-4 py-2">View Product</a>',
+      ].join("");
+    };
+
+    const upsertHistoryItem = (notification) => {
+      if (!historyList || !notification || !notification.id) return;
+      const existing = historyList.querySelector('.buyer-history-card[data-notification-id="' + String(notification.id) + '"]');
+      if (existing) existing.remove();
+
+      const wrapper = document.createElement("article");
+      wrapper.className = "buyer-history-card rounded-xl border border-slate-200 p-4";
+      wrapper.setAttribute("data-notification-id", String(notification.id));
+      wrapper.innerHTML = buildCardMarkup(notification);
+      historyList.insertBefore(wrapper, historyList.firstChild);
+      ensureHistoryEmpty();
+    };
+
+    const upsertNewReplyItem = (notification) => {
+      if (!newRepliesList || !notification || !notification.id) return;
+      const existing = newRepliesList.querySelector('.buyer-new-reply-card[data-notification-id="' + String(notification.id) + '"]');
+      if (existing) existing.remove();
+
+      const wrapper = document.createElement("article");
+      wrapper.className = "buyer-new-reply-card rounded-xl border border-slate-200 p-4";
+      wrapper.setAttribute("data-notification-id", String(notification.id));
+      wrapper.innerHTML = buildCardMarkup(notification);
+      newRepliesList.insertBefore(wrapper, newRepliesList.firstChild);
+      ensureNewRepliesEmpty();
+      syncNewRepliesCount();
+      clearHeaderUnreadBadge();
+    };
+
+    window.addEventListener("buyer-notification:new", (event) => {
+      const notification = event.detail;
+      upsertNewReplyItem(notification);
+      upsertHistoryItem(notification);
+    });
+
+    syncNewRepliesCount();
+    ensureNewRepliesEmpty();
+    ensureHistoryEmpty();
+    clearHeaderUnreadBadge();
+  })();
+</script>
+
+<%- include("partials/footer") %>

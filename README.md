@@ -26,6 +26,7 @@ The codebase supports both:
 | Password Hashing | bcryptjs |
 | Sessions / Flash | express-session + connect-flash |
 | Security | Helmet, custom CSRF middleware, express-rate-limit, cookie-parser, CORS |
+| Realtime | Socket.IO (WebSocket/polling fallback) |
 | Styling | Tailwind CSS `4.x` config + custom CSS/JS |
 | Frontend libs (installed) | GSAP, Howler, Three.js, Vue 3, Pinia |
 
@@ -41,7 +42,11 @@ The codebase supports both:
 - Buy-now checkout with stock validation and quantity deduction
 - Buyer review posting
 - Retailer review reply flow
-- Retailer notification center (pending + history)
+- Live review/reply updates on product detail pages via Socket.IO
+- Retailer notification center (pending + history) with realtime badge/dropdown updates
+- Buyer notification center (new replies + conversation history) with realtime updates
+- Buyer online popup alert when retailer replies
+- Offline-safe notification persistence in `notificationHistory` (combined history model)
 - Flash messages for UX feedback
 - Theme toggle + frontend behavior scripts
 - Health endpoints for app/API checks
@@ -54,6 +59,8 @@ Ecommerce(sem-6)/
 |   |-- app.js
 |   |-- index.js
 |   |-- package.json
+|   |-- realtime/
+|   |   `-- socketServer.js
 |   |-- config/
 |   |   |-- db.js
 |   |   |-- cors.js
@@ -83,6 +90,7 @@ Ecommerce(sem-6)/
 |   |   `-- backfillNotificationHistory.js
 |   |-- public/
 |   |-- views/
+|   |   `-- buyer_notifications.ejs
 |   `-- tailwind.config.js
 `-- README.md
 ```
@@ -110,6 +118,7 @@ Ecommerce(sem-6)/
 - `GET/POST /edit/:id` (retailer)
 - `POST /:id/delete` (retailer)
 - `GET /notifications` (retailer)
+- `GET /my-notifications` (buyer)
 - `POST /notifications/:notificationId/read` (retailer)
 - `GET /cart` (buyer)
 - `GET /wishlist` (buyer)
@@ -123,6 +132,23 @@ Ecommerce(sem-6)/
 - `GET /:id/buy-now` (buyer)
 - `POST /:id/buy-now` (buyer)
 - `GET /:id`
+
+## Realtime Events (Socket.IO)
+
+The server initializes Socket.IO in `server/index.js` and manages rooms in `server/realtime/socketServer.js`.
+
+- Product room (`product:<productId>`)
+  - `review:created` when buyer posts a review
+  - `review:replied` when retailer replies to a review
+
+- Retailer room (`retailer:<retailerId>`)
+  - `retailer:notification:new` when a new buyer review needs reply
+  - `retailer:notification:replied` when the thread moves to replied/history state
+
+- Buyer room (`buyer:<buyerId>`)
+  - `buyer:notification:new` when retailer replies to buyer review
+
+If a user is offline, notifications are still persisted in `notificationHistory` and rendered later from history pages.
 
 ### Product API (`/api/products`) - retailer scoped
 - `GET /`

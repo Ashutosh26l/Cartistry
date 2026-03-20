@@ -2,6 +2,13 @@ import Product from "../../models/productModel.js";
 import NotificationHistory from "../../models/notificationHistoryModel.js";
 import User from "../../models/userModel.js";
 import { getOwnerFilter, getSafeRedirectPath } from "./productShared.js";
+import {
+  emitBuyerNotificationReplied,
+  emitRetailerNotificationCreated,
+  emitRetailerNotificationReplied,
+  emitReviewCreated,
+  emitReviewReplied,
+} from "../../realtime/socketServer.js";
 
 const getRetailerNotificationRedirect = (req, fallback) =>
   getSafeRedirectPath(req.body.redirectTo, fallback || "/products/notifications");
@@ -77,12 +84,41 @@ export const addProductReview = async (req, res) => {
     await updatedProduct.save();
 
     const latestReviewIndex = Math.max(0, updatedProduct.reviews.length - 1);
-    await NotificationHistory.create({
+    const createdNotification = await NotificationHistory.create({
       retailer: updatedProduct.owner,
       buyer: req.user.id,
       product: updatedProduct._id,
       reviewIndex: latestReviewIndex,
       isRead: false,
+    });
+    const latestReview = updatedProduct.reviews[latestReviewIndex];
+    emitReviewCreated({
+      productId: updatedProduct._id,
+      reviewIndex: latestReviewIndex,
+      review: {
+        userName: latestReview.userName,
+        rating: Number(latestReview.rating || 0),
+        comment: latestReview.comment,
+        createdAt: latestReview.createdAt,
+      },
+    });
+    emitRetailerNotificationCreated({
+      retailerId: updatedProduct.owner,
+      notification: {
+        id: String(createdNotification._id),
+        productId: String(updatedProduct._id),
+        productName: updatedProduct.name || "Product unavailable",
+        reviewIndex: latestReviewIndex,
+        buyerName: currentUserName || "Buyer",
+        rating: Number(latestReview.rating || 0),
+        comment: latestReview.comment || "",
+        reviewCreatedAt: latestReview.createdAt,
+        createdAt: createdNotification.createdAt,
+        replied: false,
+        isRead: false,
+        reviewAvailable: true,
+        href: `/products/${updatedProduct._id}`,
+      },
     });
 
     req.flash("success", "Review added successfully");
@@ -125,6 +161,15 @@ export const replyToReview = async (req, res) => {
     product.reviews[parsedIndex].repliedBy = String(res.locals.currentUser?.name || "Retailer").trim();
     product.reviews[parsedIndex].repliedAt = new Date();
     await product.save();
+    emitReviewReplied({
+      productId: product._id,
+      reviewIndex: parsedIndex,
+      reply: {
+        reply: product.reviews[parsedIndex].retailerReply,
+        repliedBy: product.reviews[parsedIndex].repliedBy,
+        repliedAt: product.reviews[parsedIndex].repliedAt,
+      },
+    });
     const notificationFilter = {
       product: product._id,
       reviewIndex: parsedIndex,
@@ -137,20 +182,66 @@ export const replyToReview = async (req, res) => {
         repliedAt: product.reviews[parsedIndex].repliedAt,
         isRead: true,
         readAt: new Date(),
+        buyerIsRead: false,
+        buyerReadAt: null,
       },
     };
     const notificationId = String(req.body.notificationId || "").trim();
+    let updatedNotification = null;
     if (notificationId) {
-      await NotificationHistory.findOneAndUpdate(
+      updatedNotification = await NotificationHistory.findOneAndUpdate(
         { _id: notificationId, retailer: req.user.id, ...notificationFilter },
-        notificationPayload
+        notificationPayload,
+        { new: true }
       );
     } else {
-      await NotificationHistory.findOneAndUpdate(
+      updatedNotification = await NotificationHistory.findOneAndUpdate(
         { retailer: req.user.id, ...notificationFilter },
         notificationPayload,
-        { sort: { createdAt: -1 } }
+        { sort: { createdAt: -1 }, new: true }
       );
+    }
+    if (updatedNotification) {
+      emitRetailerNotificationReplied({
+        retailerId: req.user.id,
+        notification: {
+          id: String(updatedNotification._id),
+          productId: String(product._id),
+          productName: product.name || "Product unavailable",
+          reviewIndex: parsedIndex,
+          buyerName: product.reviews[parsedIndex].userName || "Buyer",
+          rating: Number(product.reviews[parsedIndex].rating || 0),
+          comment: product.reviews[parsedIndex].comment || "",
+          reviewCreatedAt: product.reviews[parsedIndex].createdAt,
+          reply: replyText,
+          repliedBy: product.reviews[parsedIndex].repliedBy,
+          repliedAt: product.reviews[parsedIndex].repliedAt,
+          createdAt: updatedNotification.createdAt,
+          replied: true,
+          isRead: true,
+          href: `/products/${product._id}`,
+        },
+      });
+      emitBuyerNotificationReplied({
+        buyerId: updatedNotification.buyer,
+        notification: {
+          id: String(updatedNotification._id),
+          productId: String(product._id),
+          productName: product.name || "Product unavailable",
+          reviewIndex: parsedIndex,
+          buyerName: product.reviews[parsedIndex].userName || "Buyer",
+          rating: Number(product.reviews[parsedIndex].rating || 0),
+          comment: product.reviews[parsedIndex].comment || "",
+          reviewCreatedAt: product.reviews[parsedIndex].createdAt,
+          reply: replyText,
+          repliedBy: product.reviews[parsedIndex].repliedBy,
+          repliedAt: product.reviews[parsedIndex].repliedAt,
+          createdAt: updatedNotification.createdAt,
+          replied: true,
+          buyerIsRead: false,
+          href: `/products/${product._id}`,
+        },
+      });
     }
 
     req.flash("success", "Reply posted successfully.");
@@ -158,6 +249,42 @@ export const replyToReview = async (req, res) => {
   } catch (error) {
     req.flash("error", "Unable to post reply");
     return res.status(500).render("error", { statusCode: 500, message: "Unable to post reply" });
+  }
+};
+
+export const getBuyerNotificationsPage = async (req, res) => {
+  try {
+    const buyerId = req.user.id;
+    const [newReplyNotificationsRaw, historyNotificationsRaw] = await Promise.all([
+      NotificationHistory.find({ buyer: buyerId, replied: true, buyerIsRead: { $ne: true } })
+        .sort({ repliedAt: -1, createdAt: -1 })
+        .limit(50)
+        .lean(),
+      NotificationHistory.find({ buyer: buyerId, replied: true })
+        .sort({ repliedAt: -1, createdAt: -1 })
+        .limit(200)
+        .lean(),
+    ]);
+
+    const [newReplyNotifications, historyNotifications] = await Promise.all([
+      enrichNotifications(newReplyNotificationsRaw),
+      enrichNotifications(historyNotificationsRaw),
+    ]);
+
+    await NotificationHistory.updateMany(
+      { buyer: buyerId, replied: true, buyerIsRead: { $ne: true } },
+      { $set: { buyerIsRead: true, buyerReadAt: new Date() } }
+    );
+
+    return res.render("buyer_notifications", {
+      newReplyNotifications,
+      historyNotifications,
+    });
+  } catch (error) {
+    return res.status(500).render("error", {
+      statusCode: 500,
+      message: "Unable to load buyer notifications",
+    });
   }
 };
 

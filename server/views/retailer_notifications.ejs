@@ -15,20 +15,25 @@
     <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
       <div class="flex items-center justify-between gap-3">
         <h2 class="text-xl font-bold text-slate-900">Pending Replies</h2>
-        <span class="pending-count-badge rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold"><%= pendingNotifications.length %> pending</span>
+        <span id="pendingCountBadge" class="pending-count-badge rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold" data-count="<%= pendingNotifications.length %>"><%= pendingNotifications.length %> pending</span>
       </div>
 
-      <div class="mt-5 space-y-4">
+      <div id="pendingNotificationsList" class="mt-5 space-y-4">
         <% if (pendingNotifications && pendingNotifications.length) { %>
         <% pendingNotifications.forEach(function(item) { %>
-        <article class="rounded-xl border border-slate-200 p-4">
+        <article
+          class="pending-notification-card rounded-xl border border-slate-200 p-4"
+          data-notification-id="<%= item._id %>"
+          data-product-id="<%= item.product %>"
+          data-review-index="<%= item.reviewIndex %>"
+        >
           <div class="flex items-center justify-between gap-3">
-            <p class="font-semibold text-slate-900"><%= item.productName %></p>
-            <span class="text-xs font-medium text-amber-600"><%= '\u2605'.repeat(item.rating) %><%= '\u2606'.repeat(5 - item.rating) %></span>
+            <p class="pending-product-name font-semibold text-slate-900"><%= item.productName %></p>
+            <span class="pending-rating text-xs font-medium text-amber-600"><%= '\u2605'.repeat(item.rating) %><%= '\u2606'.repeat(5 - item.rating) %></span>
           </div>
-          <p class="text-sm text-slate-600 mt-1">By <span class="font-medium"><%= item.buyerName %></span></p>
-          <p class="text-sm text-slate-700 mt-2"><%= item.comment %></p>
-          <p class="text-xs text-slate-400 mt-2"><%= item.reviewCreatedAt ? new Date(item.reviewCreatedAt).toLocaleString() : '' %></p>
+          <p class="pending-buyer text-sm text-slate-600 mt-1">By <span class="font-medium"><%= item.buyerName %></span></p>
+          <p class="pending-comment text-sm text-slate-700 mt-2"><%= item.comment %></p>
+          <p class="pending-created text-xs text-slate-400 mt-2"><%= item.reviewCreatedAt ? new Date(item.reviewCreatedAt).toLocaleString() : '' %></p>
 
           <% if (item.reviewAvailable) { %>
           <form method="POST" action="/products/<%= item.product %>/reviews/<%= item.reviewIndex %>/reply" class="mt-3 space-y-2">
@@ -61,7 +66,7 @@
         </article>
         <% }); %>
         <% } else { %>
-        <p class="text-slate-500">No pending review notifications.</p>
+        <p id="pendingNotificationsEmpty" class="text-slate-500">No pending review notifications.</p>
         <% } %>
       </div>
     </div>
@@ -70,10 +75,10 @@
       <h2 class="text-xl font-bold text-slate-900">Notification History</h2>
       <p class="text-sm text-slate-500 mt-1">Latest review alerts and replied threads.</p>
 
-      <div class="mt-5 space-y-3 max-h-[760px] overflow-auto pr-1">
+      <div id="historyNotificationsList" class="mt-5 space-y-3 max-h-[760px] overflow-auto pr-1">
         <% if (historyNotifications && historyNotifications.length) { %>
         <% historyNotifications.forEach(function(item) { %>
-        <article class="rounded-xl border border-slate-200 p-4">
+        <article class="history-notification-card rounded-xl border border-slate-200 p-4" data-notification-id="<%= item._id %>">
           <div class="flex items-center justify-between gap-2">
             <p class="font-semibold text-slate-900"><%= item.productName %></p>
             <span class="notification-history-status notification-history-status-<%= item.replied ? 'replied' : 'pending' %> text-xs <%= item.replied ? 'text-emerald-700' : 'text-amber-700' %>"><%= item.replied ? 'Replied' : 'Pending' %></span>
@@ -92,11 +97,201 @@
         </article>
         <% }); %>
         <% } else { %>
-        <p class="text-slate-500">No notification history yet.</p>
+        <p id="historyNotificationsEmpty" class="text-slate-500">No notification history yet.</p>
         <% } %>
       </div>
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    const retailerId = "<%= currentUser ? String(currentUser._id || '') : '' %>";
+    if (!retailerId || !window.io) return;
+
+    const pendingList = document.getElementById("pendingNotificationsList");
+    const historyList = document.getElementById("historyNotificationsList");
+    const pendingBadge = document.getElementById("pendingCountBadge");
+    const csrfToken = "<%= csrfToken %>";
+
+    const escapeHtml = (value) =>
+      String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const formatTime = (value) => {
+      if (!value) return "";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
+    };
+
+    const renderStars = (rating) => {
+      const safeRating = Math.max(0, Math.min(5, Number(rating) || 0));
+      return "\u2605".repeat(safeRating) + "\u2606".repeat(5 - safeRating);
+    };
+
+    const setPendingCount = (countValue) => {
+      if (!pendingBadge) return;
+      const safeCount = Math.max(0, Number(countValue) || 0);
+      pendingBadge.setAttribute("data-count", String(safeCount));
+      pendingBadge.textContent = safeCount + " pending";
+    };
+
+    const syncPendingCount = () => {
+      if (!pendingList) return;
+      const cards = pendingList.querySelectorAll(".pending-notification-card");
+      setPendingCount(cards.length);
+    };
+
+    const ensurePendingEmpty = () => {
+      if (!pendingList) return;
+      const hasCard = pendingList.querySelector(".pending-notification-card");
+      const emptyNode = document.getElementById("pendingNotificationsEmpty");
+      if (hasCard && emptyNode) {
+        emptyNode.remove();
+        return;
+      }
+      if (!hasCard && !emptyNode) {
+        const text = document.createElement("p");
+        text.id = "pendingNotificationsEmpty";
+        text.className = "text-slate-500";
+        text.textContent = "No pending review notifications.";
+        pendingList.appendChild(text);
+      }
+    };
+
+    const ensureHistoryEmpty = () => {
+      if (!historyList) return;
+      const hasCard = historyList.querySelector(".history-notification-card");
+      const emptyNode = document.getElementById("historyNotificationsEmpty");
+      if (hasCard && emptyNode) {
+        emptyNode.remove();
+        return;
+      }
+      if (!hasCard && !emptyNode) {
+        const text = document.createElement("p");
+        text.id = "historyNotificationsEmpty";
+        text.className = "text-slate-500";
+        text.textContent = "No notification history yet.";
+        historyList.appendChild(text);
+      }
+    };
+
+    const getPendingCardByNotification = (notification) => {
+      if (!pendingList || !notification) return null;
+      const notificationId = String(notification.id || "");
+      if (notificationId) {
+        const card = pendingList.querySelector(
+          '.pending-notification-card[data-notification-id="' + notificationId + '"]'
+        );
+        if (card) return card;
+      }
+      const productId = String(notification.productId || "");
+      const reviewIndex = String(notification.reviewIndex || "");
+      if (!productId || reviewIndex === "") return null;
+      return pendingList.querySelector(
+        '.pending-notification-card[data-product-id="' + productId + '"][data-review-index="' + reviewIndex + '"]'
+      );
+    };
+
+    const prependPendingNotification = (notification) => {
+      if (!pendingList || !notification || !notification.id) return;
+      if (getPendingCardByNotification(notification)) return;
+      const wrapper = document.createElement("article");
+      wrapper.className = "pending-notification-card rounded-xl border border-slate-200 p-4";
+      wrapper.setAttribute("data-notification-id", String(notification.id));
+      wrapper.setAttribute("data-product-id", String(notification.productId || ""));
+      wrapper.setAttribute("data-review-index", String(notification.reviewIndex || ""));
+      wrapper.innerHTML = [
+        '<div class="flex items-center justify-between gap-3">',
+        '<p class="pending-product-name font-semibold text-slate-900">' + escapeHtml(notification.productName || "Product unavailable") + "</p>",
+        '<span class="pending-rating text-xs font-medium text-amber-600">' + renderStars(notification.rating) + "</span>",
+        "</div>",
+        '<p class="pending-buyer text-sm text-slate-600 mt-1">By <span class="font-medium">' + escapeHtml(notification.buyerName || "Buyer") + "</span></p>",
+        '<p class="pending-comment text-sm text-slate-700 mt-2">' + escapeHtml(notification.comment || "") + "</p>",
+        '<p class="pending-created text-xs text-slate-400 mt-2">' + escapeHtml(formatTime(notification.reviewCreatedAt || notification.createdAt)) + "</p>",
+        '<form method="POST" action="/products/' + escapeHtml(notification.productId || "") + '/reviews/' + escapeHtml(notification.reviewIndex || 0) + '/reply" class="mt-3 space-y-2">',
+        '<input type="hidden" name="_csrf" value="' + escapeHtml(csrfToken) + '" />',
+        '<input type="hidden" name="notificationId" value="' + escapeHtml(notification.id) + '" />',
+        '<input type="hidden" name="redirectTo" value="/products/notifications" />',
+        '<textarea name="reply" rows="2" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500" placeholder="Reply to this review"></textarea>',
+        '<div class="flex items-center gap-2">',
+        '<button type="submit" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2">Post Reply</button>',
+        '<a href="' + escapeHtml(notification.href || ("/products/" + String(notification.productId || ""))) + '" class="rounded-lg border border-slate-300 hover:border-slate-500 text-slate-700 text-sm font-medium px-4 py-2">View Product</a>',
+        "</div>",
+        "</form>",
+      ].join("");
+      pendingList.insertBefore(wrapper, pendingList.firstChild);
+      ensurePendingEmpty();
+      syncPendingCount();
+    };
+
+    const upsertHistoryNotification = (notification) => {
+      if (!historyList || !notification || !notification.id) return;
+      const notificationId = String(notification.id);
+      const existing = historyList.querySelector(
+        '.history-notification-card[data-notification-id="' + notificationId + '"]'
+      );
+      if (existing) existing.remove();
+
+      const wrapper = document.createElement("article");
+      wrapper.className = "history-notification-card rounded-xl border border-slate-200 p-4";
+      wrapper.setAttribute("data-notification-id", notificationId);
+      wrapper.innerHTML = [
+        '<div class="flex items-center justify-between gap-2">',
+        '<p class="font-semibold text-slate-900">' + escapeHtml(notification.productName || "Product unavailable") + "</p>",
+        '<span class="notification-history-status notification-history-status-replied text-xs text-emerald-700">Replied</span>',
+        "</div>",
+        '<p class="text-sm text-slate-600 mt-1">Buyer: ' + escapeHtml(notification.buyerName || "Buyer") + "</p>",
+        '<p class="text-sm text-slate-700 mt-2">' + escapeHtml(notification.comment || "") + "</p>",
+        notification.reply
+          ? [
+              '<div class="notification-history-reply-box mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2">',
+              '<p class="notification-history-reply-label text-xs font-semibold uppercase tracking-wide text-emerald-900">Your Reply</p>',
+              '<p class="notification-history-reply-text text-sm text-emerald-950 mt-1">' + escapeHtml(notification.reply) + "</p>",
+              notification.repliedAt
+                ? '<p class="notification-history-reply-time text-xs text-emerald-700 mt-1">' + escapeHtml(formatTime(notification.repliedAt)) + "</p>"
+                : "",
+              "</div>",
+            ].join("")
+          : "",
+      ].join("");
+
+      historyList.insertBefore(wrapper, historyList.firstChild);
+      ensureHistoryEmpty();
+    };
+
+    const handleNotificationNew = (notification) => {
+      prependPendingNotification(notification);
+    };
+
+    const handleNotificationReplied = (notification) => {
+      if (!notification) return;
+      const pendingCard = getPendingCardByNotification(notification);
+      if (pendingCard) pendingCard.remove();
+      ensurePendingEmpty();
+      syncPendingCount();
+      upsertHistoryNotification(notification);
+    };
+
+    const socket = window.__appRealtimeSocket || window.io();
+    window.__appRealtimeSocket = socket;
+    socket.emit("retailer:join", retailerId);
+
+    window.addEventListener("retailer-notification:new", (event) => {
+      handleNotificationNew(event.detail);
+    });
+    window.addEventListener("retailer-notification:replied", (event) => {
+      handleNotificationReplied(event.detail);
+    });
+
+    syncPendingCount();
+    ensurePendingEmpty();
+    ensureHistoryEmpty();
+  })();
+</script>
 
 <%- include("partials/footer") %>

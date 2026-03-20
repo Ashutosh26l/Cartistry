@@ -9,6 +9,7 @@ import {
   getBuyNowPage,
   getAddProductPage,
   getAllProductsPage,
+  getBuyerNotificationsPage,
   getWishlistPage,
   getEditProductPage,
   getRetailerNotificationsPage,
@@ -30,6 +31,7 @@ router.use(requireAuthPage);
 
 router.get("/allProducts", getAllProductsPage);
 router.get("/notifications", requireRetailerPage, getRetailerNotificationsPage);
+router.get("/my-notifications", requireBuyerPage, getBuyerNotificationsPage);
 router.post("/notifications/:notificationId/read", requireRetailerPage, markRetailerNotificationRead);
 router.post("/:id/reviews", requireBuyerPage, validateReview, addProductReview);
 router.post("/:id/reviews/:reviewIndex/reply", requireRetailerPage, validateReviewReply, replyToReview);

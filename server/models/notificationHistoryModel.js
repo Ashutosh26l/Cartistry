@@ -8,6 +8,8 @@ const notificationHistorySchema = new mongoose.Schema(
     reviewIndex: { type: Number, required: true, min: 0 },
     isRead: { type: Boolean, default: false, index: true },
     readAt: { type: Date, default: null },
+    buyerIsRead: { type: Boolean, default: false, index: true },
+    buyerReadAt: { type: Date, default: null },
     replied: { type: Boolean, default: false, index: true },
     reply: { type: String, trim: true, default: "" },
     repliedBy: { type: String, trim: true, default: "" },
@@ -19,6 +21,8 @@ const notificationHistorySchema = new mongoose.Schema(
 notificationHistorySchema.index({ retailer: 1, createdAt: -1 });
 notificationHistorySchema.index({ retailer: 1, isRead: 1, createdAt: -1 });
 notificationHistorySchema.index({ retailer: 1, replied: 1, createdAt: -1 });
+notificationHistorySchema.index({ buyer: 1, buyerIsRead: 1, replied: 1, repliedAt: -1 });
+notificationHistorySchema.index({ buyer: 1, replied: 1, repliedAt: -1 });
 notificationHistorySchema.index({ retailer: 1, product: 1, reviewIndex: 1 }, { unique: true });
 
 const NotificationHistory = mongoose.model("NotificationHistory", notificationHistorySchema);

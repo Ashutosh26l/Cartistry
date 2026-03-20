@@ -235,6 +235,18 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+        line-height: 1;
+      }
+      .notification-nav-icon {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        display: block;
+        position: relative;
+        top: 1px;
+      }
+      html.dark .notification-nav-icon {
+        filter: invert(1) brightness(1.15);
       }
       .notification-nav-badge {
         display: inline-flex;
@@ -395,33 +407,6 @@
               <% if (isRetailer) { %>
               <a href="/products/new" class="text-slate-700 hover:text-indigo-600">Add Product</a>
               <a href="/products/allProducts" class="text-slate-700 hover:text-indigo-600">My Products</a>
-              <div class="relative group py-2 -my-2">
-                <a href="/products/notifications" class="notification-nav-link text-slate-700 hover:text-indigo-600">
-                  <span>Notifications</span>
-                  <% if (retailerNotificationUnreadCount && retailerNotificationUnreadCount > 0) { %>
-                  <span class="notification-nav-badge"><%= retailerNotificationUnreadCount > 9 ? "9+" : retailerNotificationUnreadCount %></span>
-                  <% } %>
-                </a>
-                <div class="invisible opacity-0 translate-y-1 pointer-events-none group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:pointer-events-auto transition-all duration-150 absolute right-0 top-full z-50 w-[340px] max-h-[360px] overflow-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
-                  <div class="flex items-center justify-between">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent Messages</p>
-                    <a href="/products/notifications" class="text-xs text-indigo-600 hover:text-indigo-500 font-semibold">Open all</a>
-                  </div>
-                  <div class="mt-2 space-y-2">
-                    <% if (retailerNotificationPreview && retailerNotificationPreview.length) { %>
-                    <% retailerNotificationPreview.forEach(function(item) { %>
-                    <a href="<%= item.href %>" class="block rounded-lg border border-slate-200 px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/50">
-                      <p class="text-sm font-semibold text-slate-900"><%= item.productName %></p>
-                      <p class="text-xs text-slate-600 mt-0.5"><%= item.buyerName %></p>
-                      <p class="text-xs text-slate-500 mt-1 truncate"><%= item.comment %></p>
-                    </a>
-                    <% }); %>
-                    <% } else { %>
-                    <p class="text-xs text-slate-500">No messages yet.</p>
-                    <% } %>
-                  </div>
-                </div>
-              </div>
               <% } %>
               <% if (isBuyer) { %>
               <a href="/products/allProducts" class="text-slate-700 hover:text-indigo-600">Shop</a>
@@ -431,6 +416,78 @@
               </a>
               <% } %>
               <span class="text-slate-500 hidden sm:inline">Hi, <%= currentUser.name %></span>
+              <% if (isRetailer) { %>
+              <% const unreadNotificationCount = Number(retailerNotificationUnreadCount || 0); %>
+              <div class="relative group py-2 -my-2">
+                <a href="/products/notifications" class="notification-nav-link text-slate-700 hover:text-indigo-600" aria-label="Notifications" title="Notifications">
+                  <img src="/image.png" alt="Notifications" class="notification-nav-icon" />
+                  <span
+                    id="retailerNotificationNavBadge"
+                    class="notification-nav-badge <%= unreadNotificationCount > 0 ? '' : 'hidden' %>"
+                    data-count="<%= unreadNotificationCount %>"
+                  ><%= unreadNotificationCount > 9 ? "9+" : unreadNotificationCount %></span>
+                </a>
+                <div class="invisible opacity-0 translate-y-1 pointer-events-none group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:pointer-events-auto transition-all duration-150 absolute right-0 top-full z-50 w-[340px] max-h-[360px] overflow-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent Messages</p>
+                    <a href="/products/notifications" class="text-xs text-indigo-600 hover:text-indigo-500 font-semibold">Open all</a>
+                  </div>
+                  <div id="retailerNotificationPreviewList" class="mt-2 space-y-2">
+                    <% if (retailerNotificationPreview && retailerNotificationPreview.length) { %>
+                    <% retailerNotificationPreview.forEach(function(item) { %>
+                    <a
+                      href="<%= item.href %>"
+                      class="notification-preview-item block rounded-lg border border-slate-200 px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/50"
+                      data-notification-id="<%= item.id %>"
+                    >
+                      <p class="text-sm font-semibold text-slate-900"><%= item.productName %></p>
+                      <p class="text-xs text-slate-600 mt-0.5"><%= item.buyerName %></p>
+                      <p class="text-xs text-slate-500 mt-1 truncate"><%= item.comment %></p>
+                    </a>
+                    <% }); %>
+                    <% } else { %>
+                    <p id="retailerPreviewEmpty" class="text-xs text-slate-500">No messages yet.</p>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+              <% } %>
+              <% if (isBuyer) { %>
+              <% const buyerUnreadCount = Number(buyerNotificationUnreadCount || 0); %>
+              <div class="relative group py-2 -my-2">
+                <a href="/products/my-notifications" class="notification-nav-link text-slate-700 hover:text-indigo-600" aria-label="Notifications" title="Notifications">
+                  <img src="/image.png" alt="Notifications" class="notification-nav-icon" />
+                  <span
+                    id="buyerNotificationNavBadge"
+                    class="notification-nav-badge <%= buyerUnreadCount > 0 ? '' : 'hidden' %>"
+                    data-count="<%= buyerUnreadCount %>"
+                  ><%= buyerUnreadCount > 9 ? "9+" : buyerUnreadCount %></span>
+                </a>
+                <div class="invisible opacity-0 translate-y-1 pointer-events-none group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100 group-focus-within:translate-y-0 group-focus-within:pointer-events-auto transition-all duration-150 absolute right-0 top-full z-50 w-[340px] max-h-[360px] overflow-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reply Alerts</p>
+                    <a href="/products/my-notifications" class="text-xs text-indigo-600 hover:text-indigo-500 font-semibold">Open all</a>
+                  </div>
+                  <div id="buyerNotificationPreviewList" class="mt-2 space-y-2">
+                    <% if (buyerNotificationPreview && buyerNotificationPreview.length) { %>
+                    <% buyerNotificationPreview.forEach(function(item) { %>
+                    <a
+                      href="<%= item.href %>"
+                      class="buyer-notification-preview-item block rounded-lg border border-slate-200 px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/50"
+                      data-notification-id="<%= item.id %>"
+                    >
+                      <p class="text-sm font-semibold text-slate-900"><%= item.productName %></p>
+                      <p class="text-xs text-slate-600 mt-0.5">Reply by <%= item.repliedBy || 'Retailer' %></p>
+                      <p class="text-xs text-slate-500 mt-1 truncate"><%= item.reply || 'You have a new reply' %></p>
+                    </a>
+                    <% }); %>
+                    <% } else { %>
+                    <p id="buyerPreviewEmpty" class="text-xs text-slate-500">No reply alerts yet.</p>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+              <% } %>
               <form
                 action="/auth/logout"
                 method="post"
@@ -488,5 +545,232 @@
           </div>
         </div>
       </header>
+      <script src="/socket.io/socket.io.js"></script>
+      <% if (currentUser && (currentUser.role === "retailer" || currentUser.role === "admin")) { %>
+      <script>
+        (function () {
+          const retailerId = "<%= String(currentUser._id || '') %>";
+          if (!retailerId || !window.io) return;
+
+          const badge = document.getElementById("retailerNotificationNavBadge");
+          const previewList = document.getElementById("retailerNotificationPreviewList");
+          const maxPreviewItems = 6;
+
+          const getBadgeCount = () => Number(badge?.getAttribute("data-count") || "0") || 0;
+          const setBadgeCount = (value) => {
+            if (!badge) return;
+            const nextCount = Math.max(0, Number(value) || 0);
+            badge.setAttribute("data-count", String(nextCount));
+            badge.textContent = nextCount > 9 ? "9+" : String(nextCount);
+            badge.classList.toggle("hidden", nextCount <= 0);
+          };
+
+          const escapeHtml = (value) =>
+            String(value || "")
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/\"/g, "&quot;")
+              .replace(/'/g, "&#39;");
+
+          const removePreviewEmpty = () => {
+            if (!previewList) return;
+            const emptyNode = document.getElementById("retailerPreviewEmpty");
+            if (emptyNode) emptyNode.remove();
+          };
+
+          const ensurePreviewEmpty = () => {
+            if (!previewList) return;
+            const hasItems = previewList.querySelector(".notification-preview-item");
+            if (hasItems || document.getElementById("retailerPreviewEmpty")) return;
+            const emptyText = document.createElement("p");
+            emptyText.id = "retailerPreviewEmpty";
+            emptyText.className = "text-xs text-slate-500";
+            emptyText.textContent = "No messages yet.";
+            previewList.appendChild(emptyText);
+          };
+
+          const trimPreviewItems = () => {
+            if (!previewList) return;
+            const items = previewList.querySelectorAll(".notification-preview-item");
+            for (let index = maxPreviewItems; index < items.length; index += 1) {
+              items[index].remove();
+            }
+          };
+
+          const upsertPreviewItem = (notification) => {
+            if (!previewList || !notification || !notification.id) return;
+            const existing = previewList.querySelector(
+              '.notification-preview-item[data-notification-id="' + String(notification.id) + '"]'
+            );
+            if (existing) existing.remove();
+            removePreviewEmpty();
+
+            const item = document.createElement("a");
+            item.className = "notification-preview-item block rounded-lg border border-slate-200 px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/50";
+            item.setAttribute("data-notification-id", String(notification.id));
+            item.href = notification.href || "/products/notifications";
+            item.innerHTML = [
+              '<p class="text-sm font-semibold text-slate-900">' + escapeHtml(notification.productName || "Product unavailable") + "</p>",
+              '<p class="text-xs text-slate-600 mt-0.5">' + escapeHtml(notification.buyerName || "Buyer") + "</p>",
+              '<p class="text-xs text-slate-500 mt-1 truncate">' + escapeHtml(notification.comment || "") + "</p>",
+            ].join("");
+
+            previewList.insertBefore(item, previewList.firstChild);
+            trimPreviewItems();
+            ensurePreviewEmpty();
+          };
+
+          setBadgeCount(getBadgeCount());
+
+          const socket = window.__appRealtimeSocket || window.io();
+          window.__appRealtimeSocket = socket;
+
+          if (!window.__retailerRealtimeSocketJoined) {
+            socket.emit("retailer:join", retailerId);
+            window.__retailerRealtimeSocketJoined = retailerId;
+            window.addEventListener("beforeunload", () => {
+              socket.emit("retailer:leave", retailerId);
+            });
+          }
+
+          if (!window.__retailerRealtimeHandlersAttached) {
+            window.__retailerRealtimeHandlersAttached = true;
+            socket.on("retailer:notification:new", (payload) => {
+              const notification = payload?.notification;
+              if (!notification) return;
+              setBadgeCount(getBadgeCount() + 1);
+              upsertPreviewItem(notification);
+              window.dispatchEvent(new CustomEvent("retailer-notification:new", { detail: notification }));
+            });
+
+            socket.on("retailer:notification:replied", (payload) => {
+              const notification = payload?.notification;
+              if (!notification) return;
+              setBadgeCount(getBadgeCount() - 1);
+              upsertPreviewItem(notification);
+              window.dispatchEvent(new CustomEvent("retailer-notification:replied", { detail: notification }));
+            });
+          }
+        })();
+      </script>
+      <% } %>
+      <% if (currentUser && currentUser.role === "buyer") { %>
+      <script>
+        (function () {
+          const buyerId = "<%= String(currentUser._id || '') %>";
+          if (!buyerId || !window.io) return;
+
+          const badge = document.getElementById("buyerNotificationNavBadge");
+          const previewList = document.getElementById("buyerNotificationPreviewList");
+          const maxPreviewItems = 6;
+
+          const getBadgeCount = () => Number(badge?.getAttribute("data-count") || "0") || 0;
+          const setBadgeCount = (value) => {
+            if (!badge) return;
+            const nextCount = Math.max(0, Number(value) || 0);
+            badge.setAttribute("data-count", String(nextCount));
+            badge.textContent = nextCount > 9 ? "9+" : String(nextCount);
+            badge.classList.toggle("hidden", nextCount <= 0);
+          };
+
+          const escapeHtml = (value) =>
+            String(value || "")
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/\"/g, "&quot;")
+              .replace(/'/g, "&#39;");
+
+          const removePreviewEmpty = () => {
+            if (!previewList) return;
+            const emptyNode = document.getElementById("buyerPreviewEmpty");
+            if (emptyNode) emptyNode.remove();
+          };
+
+          const ensurePreviewEmpty = () => {
+            if (!previewList) return;
+            const hasItems = previewList.querySelector(".buyer-notification-preview-item");
+            if (hasItems || document.getElementById("buyerPreviewEmpty")) return;
+            const emptyText = document.createElement("p");
+            emptyText.id = "buyerPreviewEmpty";
+            emptyText.className = "text-xs text-slate-500";
+            emptyText.textContent = "No reply alerts yet.";
+            previewList.appendChild(emptyText);
+          };
+
+          const trimPreviewItems = () => {
+            if (!previewList) return;
+            const items = previewList.querySelectorAll(".buyer-notification-preview-item");
+            for (let index = maxPreviewItems; index < items.length; index += 1) {
+              items[index].remove();
+            }
+          };
+
+          const upsertPreviewItem = (notification) => {
+            if (!previewList || !notification || !notification.id) return;
+            const existing = previewList.querySelector(
+              '.buyer-notification-preview-item[data-notification-id="' + String(notification.id) + '"]'
+            );
+            if (existing) existing.remove();
+            removePreviewEmpty();
+
+            const item = document.createElement("a");
+            item.className = "buyer-notification-preview-item block rounded-lg border border-slate-200 px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/50";
+            item.setAttribute("data-notification-id", String(notification.id));
+            item.href = notification.href || "/products/my-notifications";
+            item.innerHTML = [
+              '<p class="text-sm font-semibold text-slate-900">' + escapeHtml(notification.productName || "Product unavailable") + "</p>",
+              '<p class="text-xs text-slate-600 mt-0.5">Reply by ' + escapeHtml(notification.repliedBy || "Retailer") + "</p>",
+              '<p class="text-xs text-slate-500 mt-1 truncate">' + escapeHtml(notification.reply || "You have a new reply") + "</p>",
+            ].join("");
+
+            previewList.insertBefore(item, previewList.firstChild);
+            trimPreviewItems();
+            ensurePreviewEmpty();
+          };
+
+          const showBuyerPopup = (notification) => {
+            if (!notification || document.hidden) return;
+            const message = "New reply on " + (notification.productName || "your product review");
+            if (window.AppPopup && typeof window.AppPopup.showToast === "function") {
+              window.AppPopup.showToast(message, "success", 3500);
+              return;
+            }
+
+            const toast = document.createElement("div");
+            toast.className = "fixed top-4 right-4 z-[120] rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-lg";
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            window.setTimeout(() => toast.remove(), 3200);
+          };
+
+          setBadgeCount(getBadgeCount());
+
+          const socket = window.__appRealtimeSocket || window.io();
+          window.__appRealtimeSocket = socket;
+
+          if (!window.__buyerRealtimeSocketJoined) {
+            socket.emit("buyer:join", buyerId);
+            window.__buyerRealtimeSocketJoined = buyerId;
+            window.addEventListener("beforeunload", () => {
+              socket.emit("buyer:leave", buyerId);
+            });
+          }
+
+          if (!window.__buyerRealtimeHandlersAttached) {
+            window.__buyerRealtimeHandlersAttached = true;
+            socket.on("buyer:notification:new", (payload) => {
+              const notification = payload?.notification;
+              if (!notification) return;
+              setBadgeCount(getBadgeCount() + 1);
+              upsertPreviewItem(notification);
+              showBuyerPopup(notification);
+              window.dispatchEvent(new CustomEvent("buyer-notification:new", { detail: notification }));
+            });
+          }
+        })();
+      </script>
+      <% } %>
       <main class="site-main">
 
