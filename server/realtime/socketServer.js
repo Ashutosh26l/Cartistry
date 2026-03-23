@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import { isAllowedOrigin } from "../config/cors.js";
 
 let ioInstance = null;
 
@@ -28,7 +29,10 @@ const getCookieValue = (cookieHeader, key) => {
 export const initSocketServer = (httpServer) => {
   ioInstance = new Server(httpServer, {
     cors: {
-      origin: true,
+      origin(origin, callback) {
+        if (isAllowedOrigin(origin)) return callback(null, true);
+        return callback(new Error("Not allowed by CORS"), false);
+      },
       credentials: true,
     },
   });
@@ -37,27 +41,29 @@ export const initSocketServer = (httpServer) => {
     try {
       const token = getCookieValue(socket.handshake?.headers?.cookie, "token");
       if (!token || !process.env.JWT_SECRET) {
-        socket.data.userId = "";
-        return next();
+        return next(new Error("Unauthorized"));
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.data.userId = String(decoded?.userId || "");
+      const userId = String(decoded?.userId || "");
+      if (!userId) return next(new Error("Unauthorized"));
+      socket.data.userId = userId;
       return next();
     } catch (error) {
-      socket.data.userId = "";
-      return next();
+      return next(new Error("Unauthorized"));
     }
   });
 
   ioInstance.on("connection", (socket) => {
     socket.on("product:join", (productId) => {
-      if (!productId) return;
+      const authenticatedUserId = String(socket.data?.userId || "");
+      if (!authenticatedUserId || !productId) return;
       socket.join(getProductRoom(productId));
     });
 
     socket.on("product:leave", (productId) => {
-      if (!productId) return;
+      const authenticatedUserId = String(socket.data?.userId || "");
+      if (!authenticatedUserId || !productId) return;
       socket.leave(getProductRoom(productId));
     });
 

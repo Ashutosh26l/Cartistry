@@ -45,7 +45,7 @@ if (process.env.NODE_ENV !== "production") {
   app.use(debugRoutes);
 }
 // Route groups: auth routes are CSRF-protected (and API auth is rate-limited).
-app.use("/api/auth", authRateLimiter, authRoutes);
+app.use("/api/auth", authRateLimiter, verifyCsrfToken, authRoutes);
 app.use("/auth", authRateLimiter, verifyCsrfToken, authRoutes);
 app.use("/api/products", productApiRoutes);
 app.use("/products", verifyCsrfToken, productRoutes);

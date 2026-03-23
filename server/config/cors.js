@@ -9,21 +9,26 @@ const allowedOrigins = (process.env.CORS_ORIGIN || `http://localhost:${PORT}`)
   .map((item) => normalizeOrigin(item))
   .filter(Boolean);
 
+export const isAllowedOrigin = (origin) => {
+  const normalizedOrigin = normalizeOrigin(origin);
+  const isNullOrigin = normalizedOrigin.toLowerCase() === "null";
+  const isLocalhostDevOrigin =
+    process.env.NODE_ENV !== "production" &&
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalizedOrigin);
+  const allowNullOriginInDev = process.env.NODE_ENV !== "production" && isNullOrigin;
+
+  return (
+    !origin ||
+    allowedOrigins.includes(normalizedOrigin) ||
+    isLocalhostDevOrigin ||
+    allowNullOriginInDev
+  );
+};
+
 export const corsOptions = {
   origin(origin, callback) {
     const normalizedOrigin = normalizeOrigin(origin);
-    const isNullOrigin = normalizedOrigin.toLowerCase() === "null";
-    const isLocalhostDevOrigin =
-      process.env.NODE_ENV !== "production" &&
-      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalizedOrigin);
-    const allowNullOriginInDev = process.env.NODE_ENV !== "production" && isNullOrigin;
-
-    if (
-      !origin ||
-      allowedOrigins.includes(normalizedOrigin) ||
-      isLocalhostDevOrigin ||
-      allowNullOriginInDev
-    ) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
     console.error(
