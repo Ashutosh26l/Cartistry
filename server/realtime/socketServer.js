@@ -7,6 +7,7 @@ let ioInstance = null;
 const getProductRoom = (productId) => `product:${String(productId)}`;
 const getRetailerRoom = (retailerId) => `retailer:${String(retailerId)}`;
 const getBuyerRoom = (buyerId) => `buyer:${String(buyerId)}`;
+const getJwtSecret = () => String(process.env.JWT_SECRET || "");
 
 const getCookieValue = (cookieHeader, key) => {
   if (!cookieHeader || !key) return "";
@@ -44,7 +45,7 @@ export const initSocketServer = (httpServer) => {
         return next(new Error("Unauthorized"));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, getJwtSecret(), { algorithms: ["HS256"] });
       const userId = String(decoded?.userId || "");
       if (!userId) return next(new Error("Unauthorized"));
       socket.data.userId = userId;

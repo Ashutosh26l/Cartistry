@@ -1,22 +1,27 @@
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
+import { logSecurityEvent } from "./securityEvents.js";
 
 const getCookieValue = (req, key) => req.cookies?.[key] || null;
 
 const extractToken = (req) => getCookieValue(req, "token");
+const getJwtSecret = () => String(process.env.JWT_SECRET || "");
+const verifyToken = (token) => jwt.verify(token, getJwtSecret(), { algorithms: ["HS256"] });
 
 const authMiddleware = (req, res, next) => {
   try {
     const token = extractToken(req);
 
     if (!token) {
+      logSecurityEvent(req, "api_auth_missing_token");
       return res.status(401).json({ message: "Unauthorized: token missing" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyToken(token);
     req.user = { id: decoded.userId };
     return next();
   } catch (error) {
+    logSecurityEvent(req, "api_auth_invalid_token");
     return res.status(401).json({ message: "Unauthorized: invalid token" });
   }
 };
@@ -25,10 +30,11 @@ export const requireAuthPage = (req, res, next) => {
   try {
     const token = extractToken(req);
     if (!token) return res.redirect("/auth/login");
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyToken(token);
     req.user = { id: decoded.userId };
     return next();
   } catch (error) {
+    logSecurityEvent(req, "page_auth_invalid_token");
     return res.redirect("/auth/login");
   }
 };
@@ -64,7 +70,7 @@ export const attachCurrentUser = async (req, res, next) => {
       return next();
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = verifyToken(token);
     const user = await User.findById(decoded.userId).select("name email role wishlist");
     res.locals.currentUser = user || null;
     if (user) req.user = { id: user._id.toString() };

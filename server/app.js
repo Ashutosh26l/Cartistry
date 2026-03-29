@@ -19,13 +19,33 @@ import { attachFlashMessages } from "./middleware/flashMessages.js";
 import { attachBuyerNotificationCount, attachRetailerNotificationCount } from "./middleware/retailerNotifications.js";
 
 const app = express();
+const isProduction = process.env.NODE_ENV === "production";
+const MIN_SECRET_LENGTH = 32;
+const WEAK_COOKIE_VALUES = new Set(["replace_with_a_long_random_cookie_secret"]);
+
+const resolveCookieSecret = () => {
+  const secret = String(process.env.COOKIE_SECRET || "").trim();
+  const isWeak = !secret || secret.length < MIN_SECRET_LENGTH || WEAK_COOKIE_VALUES.has(secret);
+
+  if (isProduction && isWeak) {
+    throw new Error("COOKIE_SECRET must be a strong random value in production (32+ chars).");
+  }
+
+  if (isWeak) {
+    console.warn(
+      "Weak COOKIE_SECRET detected for development. Use a strong 32+ character secret before production deployment."
+    );
+  }
+
+  return secret || "development-only-insecure-cookie-secret";
+};
 
 app.use(express.static(path.join(path.resolve(), "/public")));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "20kb" }));
 app.set("view engine", "ejs");
 app.set("views", path.join(path.resolve(), "/views"));
-app.use(express.json());
-app.use(cookieParser(process.env.COOKIE_SECRET));
+app.use(express.json({ limit: "20kb" }));
+app.use(cookieParser(resolveCookieSecret()));
 app.use(session(sessionConfig));
 app.use(flash());
 app.use(attachFlashMessages);
@@ -33,7 +53,17 @@ app.use(attachFlashMessages);
 app.use(corsMiddleware);
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "ws:", "wss:"],
+        objectSrc: ["'none'"],
+      },
+    },
   })
 );
 // Populate current user from session/JWT and make CSRF token available on safe requests.

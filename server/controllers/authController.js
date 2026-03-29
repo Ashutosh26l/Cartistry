@@ -1,10 +1,26 @@
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
+import { logSecurityEvent } from "../middleware/securityEvents.js";
 
-const signToken = (userId) =>
-  jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "1d" });
+const MIN_PASSWORD_LENGTH = 8;
+
+const normalizeEmail = (email) => String(email || "").toLowerCase().trim();
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const getJwtSecret = () => String(process.env.JWT_SECRET || "");
+const getConfiguredRetailerDomain = () =>
+  String(process.env.RETAILER_EMAIL_DOMAIN || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, "");
+
+const getRoleFromEmail = (email) => {
+  const retailerDomain = getConfiguredRetailerDomain();
+  if (!retailerDomain) return "buyer";
+  return normalizeEmail(email).endsWith(`@${retailerDomain}`) ? "retailer" : "buyer";
+};
+
+const signToken = (userId) => jwt.sign({ userId }, getJwtSecret(), { algorithm: "HS256", expiresIn: "1d" });
 const wantsHtml = (req) => req.headers.accept && req.headers.accept.includes("text/html");
-const getRoleFromEmail = (email) => (/@tri\.com$/i.test(String(email || "").trim()) ? "retailer" : "buyer");
 const getTokenCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -23,6 +39,7 @@ export const renderLoginPage = (req, res) => {
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
     if (!name || !email || !password) {
       if (wantsHtml(req)) {
@@ -33,8 +50,24 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "name, email and password are required" });
     }
 
-    const normalizedEmail = String(email).toLowerCase().trim();
-    const existingUser = await User.findOne({ email: String(email).toLowerCase().trim() });
+    if (!isValidEmail(normalizedEmail)) {
+      if (wantsHtml(req)) {
+        return res.status(400).render("register", { error: "Please provide a valid email address", form: req.body });
+      }
+      return res.status(400).json({ message: "invalid email address" });
+    }
+
+    if (String(password).length < MIN_PASSWORD_LENGTH) {
+      if (wantsHtml(req)) {
+        return res.status(400).render("register", {
+          error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+          form: req.body,
+        });
+      }
+      return res.status(400).json({ message: `password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       if (wantsHtml(req)) {
         return res.status(409).render("register", { error: "Email already registered", form: req.body });
@@ -89,9 +122,10 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "email and password are required" });
     }
 
-    const normalizedEmail = String(email).toLowerCase().trim();
+    const normalizedEmail = normalizeEmail(email);
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
+      logSecurityEvent(req, "login_failed_unknown_user", { email: normalizedEmail });
       if (wantsHtml(req)) {
         return res.status(401).render("login", { error: "Invalid email or password", form: req.body });
       }
@@ -100,16 +134,11 @@ export const login = async (req, res) => {
 
     const isMatch = await user.comparePassword(String(password));
     if (!isMatch) {
+      logSecurityEvent(req, "login_failed_bad_password", { email: normalizedEmail });
       if (wantsHtml(req)) {
         return res.status(401).render("login", { error: "Invalid email or password", form: req.body });
       }
       return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    const computedRole = getRoleFromEmail(normalizedEmail);
-    if (user.role !== "admin" && user.role !== computedRole) {
-      user.role = computedRole;
-      await user.save();
     }
 
     const token = signToken(user._id.toString());
