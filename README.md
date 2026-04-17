@@ -1,4 +1,4 @@
-# Ecommerce (Sem-6)sdvsv
+# Ecommerce (Sem-6)
 
 Updated role-based ecommerce platform built with **Node.js + Express 5 + MongoDB + EJS**.
 
