@@ -1,0 +1,72 @@
+<%- include("partials/header", { title: "Retailer Notification Preferences" }) %>
+
+<section class="max-w-4xl mx-auto py-10">
+  <%- include("partials/flash") %>
+  <div>
+    <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Retailer Operations</p>
+    <h1 class="text-3xl font-bold text-slate-900 mt-1">Notification Preferences</h1>
+    <p class="text-slate-500 mt-2">Control in-app alerts and email for critical events.</p>
+  </div>
+
+  <form method="POST" action="/retailer/notification-preferences" class="mt-8 bg-white border border-slate-200 rounded-2xl p-6 space-y-6">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+    <div>
+      <h2 class="text-lg font-semibold text-slate-900">Channels</h2>
+      <div class="mt-3 space-y-2">
+        <label class="flex items-center gap-3">
+          <input type="checkbox" name="channelInApp" <%= preference?.channels?.inApp ? "checked" : "" %> />
+          <span class="text-slate-700">In-app notifications</span>
+        </label>
+        <label class="flex items-center gap-3">
+          <input type="checkbox" name="channelEmail" <%= preference?.channels?.email ? "checked" : "" %> />
+          <span class="text-slate-700">Email notifications</span>
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-lg font-semibold text-slate-900">Event Toggles</h2>
+      <div class="mt-3 space-y-2">
+        <label class="flex items-center gap-3">
+          <input type="checkbox" name="eventLowStock" <%= preference?.eventToggles?.lowStock ? "checked" : "" %> />
+          <span class="text-slate-700">Low stock alerts</span>
+        </label>
+        <label class="flex items-center gap-3">
+          <input type="checkbox" name="eventNewReview" <%= preference?.eventToggles?.newReview ? "checked" : "" %> />
+          <span class="text-slate-700">New review pending reply</span>
+        </label>
+        <label class="flex items-center gap-3">
+          <input type="checkbox" name="eventCsvImportSummary" <%= preference?.eventToggles?.csvImportSummary ? "checked" : "" %> />
+          <span class="text-slate-700">CSV import summary</span>
+        </label>
+        <label class="flex items-center gap-3">
+          <input type="checkbox" name="eventSecurityAlert" <%= preference?.eventToggles?.securityAlert ? "checked" : "" %> />
+          <span class="text-slate-700">Security alerts</span>
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-lg font-semibold text-slate-900">Policies</h2>
+      <div class="mt-3 space-y-4">
+        <label class="flex items-center gap-3">
+          <input type="checkbox" name="criticalOnly" <%= preference?.criticalOnly ? "checked" : "" %> />
+          <span class="text-slate-700">Critical events only</span>
+        </label>
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Low stock threshold</label>
+          <input type="number" name="lowStockThreshold" min="1" max="100" value="<%= preference?.lowStockThreshold || 5 %>" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" />
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-2">
+      <button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2">Save Preferences</button>
+      <a href="/retailer/analytics" class="ml-2 rounded-lg border border-slate-300 hover:border-slate-500 px-5 py-2 text-slate-700">Back</a>
+    </div>
+  </form>
+</section>
+
+<%- include("partials/footer") %>
+

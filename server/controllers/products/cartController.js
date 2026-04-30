@@ -1,6 +1,15 @@
 import Product from "../../models/productModel.js";
 import User from "../../models/userModel.js";
+import RetailerEvent from "../../models/retailerEventModel.js";
 import { getSafeRedirectPath, hasStock } from "./productShared.js";
+
+const recordRetailerEvent = async (payload) => {
+  try {
+    await RetailerEvent.create(payload);
+  } catch (error) {
+    // Do not block buyer flow for analytics event failures.
+  }
+};
 
 export const addToCart = async (req, res) => {
   try {
@@ -22,6 +31,14 @@ export const addToCart = async (req, res) => {
     }
 
     await user.save();
+    await recordRetailerEvent({
+      retailer: product.owner,
+      buyer: req.user.id,
+      product: product._id,
+      eventType: "add_to_cart",
+      sessionId: String(req.sessionID || ""),
+      occurredAt: new Date(),
+    });
     req.flash("success", "Added to cart.");
     return res.redirect("/products/cart");
   } catch (error) {

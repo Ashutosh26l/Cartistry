@@ -8,6 +8,7 @@ import productApiRoutes from "./routes/productApiRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import siteRoutes from "./routes/siteRoutes.js";
 import debugRoutes from "./routes/debugRoutes.js";
+import retailerRoutes from "./routes/retailerRoutes.js";
 import { attachCurrentUser } from "./middleware/auth.js";
 import { ensureCsrfToken, verifyCsrfToken } from "./middleware/csrf.js";
 import path from "path";
@@ -80,6 +81,7 @@ app.use("/api/auth", authRateLimiter, verifyCsrfToken, authRoutes);
 app.use("/auth", authRateLimiter, verifyCsrfToken, authRoutes);
 app.use("/api/products", productApiRoutes);
 app.use("/products", verifyCsrfToken, productRoutes);
+app.use(verifyCsrfToken, retailerRoutes);
 app.use(siteRoutes);
 // 404 handler for unmatched routes.
 app.use(notFoundHandler);

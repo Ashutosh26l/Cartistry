@@ -1,0 +1,135 @@
+<%- include("partials/header", { title: "Retailer Bulk Upload" }) %>
+
+<section class="max-w-6xl mx-auto py-10">
+  <%- include("partials/flash") %>
+
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <div>
+      <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Retailer Operations</p>
+      <h1 class="text-3xl font-bold text-slate-900 mt-1">Bulk Product Upload</h1>
+      <p class="text-slate-500 mt-2">Paste CSV text or load from file, preview, then commit.</p>
+    </div>
+    <a href="/retailer/bulk/template.csv" class="rounded-lg border border-slate-300 hover:border-indigo-500 px-4 py-2 text-slate-700">Download Template</a>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6">
+      <form method="POST" action="/retailer/bulk/upload/preview" class="space-y-4">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div>
+          <label class="block text-sm font-medium text-slate-700">Import Mode</label>
+          <select name="mode" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2">
+            <option value="upsert_by_name_brand" <%= mode === "upsert_by_name_brand" ? "selected" : "" %>>Upsert by name + brand</option>
+            <option value="create_only" <%= mode === "create_only" ? "selected" : "" %>>Create only</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700">CSV File (optional helper)</label>
+          <input id="csvFileInput" type="file" accept=".csv,text/csv" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" />
+          <p class="text-xs text-slate-500 mt-1">Selecting a file auto-loads its content into CSV text box below.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700">CSV Text</label>
+          <textarea id="csvTextField" name="csvText" rows="14" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs" placeholder="Paste CSV content here..." required><%= csvText || "" %></textarea>
+        </div>
+        <button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2">Preview Import</button>
+      </form>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl p-6">
+      <h2 class="text-lg font-bold text-slate-900">CSV Rules</h2>
+      <ul class="mt-3 text-sm text-slate-600 space-y-2">
+        <li>Header row required</li>
+        <li>`name`, `price` must be valid</li>
+        <li>Max 2,000 rows per upload</li>
+        <li>For variants use pipe format: `M|L|XL`</li>
+      </ul>
+      <p class="text-xs text-slate-500 mt-4">
+        Expected columns: name, description, category, brand, dateCreated, warranty, price, quantity, image, variantSizes, variantColors
+      </p>
+    </div>
+  </div>
+
+  <% if (preview) { %>
+  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-6">
+    <h2 class="text-xl font-bold text-slate-900">Preview Summary</h2>
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="rounded-lg border border-slate-200 p-3">
+        <p class="text-sm text-slate-500">Total Rows</p>
+        <p class="text-xl font-bold text-slate-900"><%= preview.totalRows %></p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-3">
+        <p class="text-sm text-slate-500">Valid</p>
+        <p class="text-xl font-bold text-emerald-700"><%= preview.validCount %></p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-3">
+        <p class="text-sm text-slate-500">Invalid</p>
+        <p class="text-xl font-bold text-rose-700"><%= preview.invalidCount %></p>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-3">
+        <p class="text-sm text-slate-500">Mode</p>
+        <p class="text-sm font-semibold text-slate-900 mt-1"><%= preview.mode %></p>
+      </div>
+    </div>
+
+    <% if (preview.commitSummary) { %>
+    <div class="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+      Created: <%= preview.commitSummary.created %> | Updated: <%= preview.commitSummary.updated %>
+    </div>
+    <% } %>
+
+    <% if (preview.errors && preview.errors.length) { %>
+    <div class="mt-6">
+      <h3 class="font-semibold text-slate-900">Error Rows</h3>
+      <div class="mt-2 max-h-56 overflow-auto rounded-lg border border-slate-200">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="text-left px-4 py-2">Line</th>
+              <th class="text-left px-4 py-2">Issue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% preview.errors.forEach(function(item) { %>
+            <tr class="border-t border-slate-200">
+              <td class="px-4 py-2"><%= item.lineNumber %></td>
+              <td class="px-4 py-2"><%= item.message %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="mt-6">
+      <form method="POST" action="/retailer/bulk/upload/commit">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <input type="hidden" name="mode" value="<%= mode %>" />
+        <textarea name="csvText" class="hidden"><%= csvText || "" %></textarea>
+        <button type="submit" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2">Commit Import</button>
+      </form>
+    </div>
+  </div>
+  <% } %>
+</section>
+
+<script>
+  (function () {
+    const fileInput = document.getElementById("csvFileInput");
+    const textArea = document.getElementById("csvTextField");
+    if (!fileInput || !textArea) return;
+    fileInput.addEventListener("change", function () {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function () {
+        textArea.value = String(reader.result || "");
+      };
+      reader.readAsText(file);
+    });
+  })();
+</script>
+
+<%- include("partials/footer") %>
+

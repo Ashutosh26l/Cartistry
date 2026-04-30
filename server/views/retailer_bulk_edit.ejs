@@ -1,0 +1,147 @@
+<%- include("partials/header", { title: "Retailer Bulk Edit" }) %>
+
+<section class="max-w-6xl mx-auto py-10">
+  <%- include("partials/flash") %>
+  <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+    <div>
+      <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Retailer Operations</p>
+      <h1 class="text-3xl font-bold text-slate-900 mt-1">Bulk Edit Products</h1>
+      <p class="text-slate-500 mt-2">Select products and apply one operation at scale.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6">
+      <form method="POST" action="/retailer/bulk/edit/preview" id="bulkEditPreviewForm">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Operation</label>
+            <select name="operation" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2">
+              <option value="price_percent" <%= operation === "price_percent" ? "selected" : "" %>>Price % (+/-)</option>
+              <option value="price_fixed" <%= operation === "price_fixed" ? "selected" : "" %>>Price fixed (+/-)</option>
+              <option value="set_category" <%= operation === "set_category" ? "selected" : "" %>>Set category</option>
+              <option value="set_brand" <%= operation === "set_brand" ? "selected" : "" %>>Set brand</option>
+              <option value="set_availability" <%= operation === "set_availability" ? "selected" : "" %>>Set availability</option>
+              <option value="set_quantity" <%= operation === "set_quantity" ? "selected" : "" %>>Set quantity</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Value</label>
+            <input type="text" name="operationValue" value="<%= operationValue || "" %>" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="e.g. 10, -50, Electronics, true, 25" />
+          </div>
+        </div>
+
+        <label class="block text-sm font-medium text-slate-700 mt-5">Selected Product IDs</label>
+        <textarea id="selectedIdsField" name="selectedIds" rows="3" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs" placeholder="Selected IDs will appear here..."><%= (selectedIds || []).join(",") %></textarea>
+
+        <div class="mt-4">
+          <button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2">Preview Changes</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl p-6">
+      <h2 class="text-lg font-bold text-slate-900">Quick Tips</h2>
+      <ul class="mt-3 text-sm text-slate-600 space-y-2">
+        <li>Price % accepts negative and positive values.</li>
+        <li>Availability accepts `true` or `false`.</li>
+        <li>Preview before apply to avoid accidental edits.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-6">
+    <h2 class="text-xl font-bold text-slate-900">Product Selection</h2>
+    <div class="mt-4 max-h-[380px] overflow-auto rounded-lg border border-slate-200">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="text-left px-4 py-2">Select</th>
+            <th class="text-left px-4 py-2">Name</th>
+            <th class="text-left px-4 py-2">Brand</th>
+            <th class="text-left px-4 py-2">Price</th>
+            <th class="text-left px-4 py-2">Qty</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (products && products.length) { %>
+          <% products.forEach(function(product) { %>
+          <tr class="border-t border-slate-200">
+            <td class="px-4 py-2">
+              <input type="checkbox" class="bulk-product-checkbox" value="<%= product._id %>" <%= selectedIds && selectedIds.includes(String(product._id)) ? "checked" : "" %> />
+            </td>
+            <td class="px-4 py-2"><%= product.name %></td>
+            <td class="px-4 py-2"><%= product.brand || "-" %></td>
+            <td class="px-4 py-2">&#8377; <%= product.price %></td>
+            <td class="px-4 py-2"><%= product.quantity %></td>
+          </tr>
+          <% }); %>
+          <% } else { %>
+          <tr>
+            <td colspan="5" class="px-4 py-6 text-slate-500">No products available.</td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <% if (previewRows && previewRows.length) { %>
+  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-6">
+    <h2 class="text-xl font-bold text-slate-900">Preview Result</h2>
+    <div class="mt-4 max-h-[360px] overflow-auto rounded-lg border border-slate-200">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="text-left px-4 py-2">Product</th>
+            <th class="text-left px-4 py-2">Before</th>
+            <th class="text-left px-4 py-2">After</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% previewRows.forEach(function(item) { %>
+          <tr class="border-t border-slate-200">
+            <td class="px-4 py-2"><%= item.product.name %></td>
+            <td class="px-4 py-2 text-xs">
+              Price: <%= item.before.price %>, Qty: <%= item.before.quantity %>, Category: <%= item.before.category || "-" %>, Brand: <%= item.before.brand || "-" %>
+            </td>
+            <td class="px-4 py-2 text-xs">
+              Price: <%= item.after.price %>, Qty: <%= item.after.quantity %>, Category: <%= item.after.category || "-" %>, Brand: <%= item.after.brand || "-" %>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <form method="POST" action="/retailer/bulk/edit/apply" class="mt-5">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <input type="hidden" name="operation" value="<%= operation %>" />
+      <input type="hidden" name="operationValue" value="<%= operationValue %>" />
+      <input type="hidden" name="selectedIds" value="<%= (selectedIds || []).join(",") %>" />
+      <button type="submit" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2">Apply Changes</button>
+    </form>
+  </div>
+  <% } %>
+</section>
+
+<script>
+  (function () {
+    const field = document.getElementById("selectedIdsField");
+    const checkboxes = document.querySelectorAll(".bulk-product-checkbox");
+    if (!field || !checkboxes.length) return;
+    const sync = () => {
+      const selected = [];
+      checkboxes.forEach((box) => {
+        if (box.checked) selected.push(box.value);
+      });
+      field.value = selected.join(",");
+    };
+    checkboxes.forEach((box) => box.addEventListener("change", sync));
+    sync();
+  })();
+</script>
+
+<%- include("partials/footer") %>
+

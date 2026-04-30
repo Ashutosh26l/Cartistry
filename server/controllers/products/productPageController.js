@@ -1,5 +1,6 @@
 import Product from "../../models/productModel.js";
 import User from "../../models/userModel.js";
+import RetailerEvent from "../../models/retailerEventModel.js";
 import {
   ALLOWED_SORTS,
   DEFAULT_PAGE_SIZE,
@@ -20,6 +21,14 @@ import {
   toNumber,
   toProductCardView,
 } from "./productShared.js";
+
+const recordRetailerEvent = async (payload) => {
+  try {
+    await RetailerEvent.create(payload);
+  } catch (error) {
+    // Analytics events should never block page rendering.
+  }
+};
 
 export const getAllProductsPage = async (req, res) => {
   try {
@@ -139,6 +148,14 @@ export const getProductDetailPage = async (req, res) => {
     if (res.locals.currentUser?.role === "buyer") {
       const user = await User.findById(req.user.id).select("wishlist");
       productView.isWishlisted = (user?.wishlist || []).some((productId) => productId.toString() === id);
+      await recordRetailerEvent({
+        retailer: product.owner,
+        buyer: req.user.id,
+        product: product._id,
+        eventType: "product_view",
+        sessionId: String(req.sessionID || ""),
+        occurredAt: new Date(),
+      });
     }
     return res.render("product_detail", { product: productView });
   } catch (error) {

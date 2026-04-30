@@ -1,6 +1,7 @@
 import Product from "../../models/productModel.js";
 import NotificationHistory from "../../models/notificationHistoryModel.js";
 import User from "../../models/userModel.js";
+import { getRetailerPreference, shouldSendNotification } from "../../models/retailerPreferenceModel.js";
 import { getOwnerFilter, getSafeRedirectPath } from "./productShared.js";
 import {
   emitBuyerNotificationReplied,
@@ -9,6 +10,34 @@ import {
   emitReviewCreated,
   emitReviewReplied,
 } from "../../realtime/socketServer.js";
+
+const sendEmailIfConfigured = async ({ to, subject, text }) => {
+  try {
+    const smtpHost = String(process.env.SMTP_HOST || "").trim();
+    const smtpPort = Number(process.env.SMTP_PORT || 0);
+    const smtpUser = String(process.env.SMTP_USER || "").trim();
+    const smtpPass = String(process.env.SMTP_PASS || "").trim();
+    const smtpFrom = String(process.env.SMTP_FROM || "").trim();
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom || !to) return false;
+
+    const { default: nodemailer } = await import("nodemailer");
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+    await transporter.sendMail({
+      from: smtpFrom,
+      to,
+      subject,
+      text,
+    });
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
 
 const getRetailerNotificationRedirect = (req, fallback) =>
   getSafeRedirectPath(req.body.redirectTo, fallback || "/products/notifications");
@@ -84,13 +113,28 @@ export const addProductReview = async (req, res) => {
     await updatedProduct.save();
 
     const latestReviewIndex = Math.max(0, updatedProduct.reviews.length - 1);
-    const createdNotification = await NotificationHistory.create({
-      retailer: updatedProduct.owner,
-      buyer: req.user.id,
-      product: updatedProduct._id,
-      reviewIndex: latestReviewIndex,
-      isRead: false,
+    const preference = await getRetailerPreference(updatedProduct.owner);
+    const allowInApp = shouldSendNotification(preference, {
+      eventKey: "new_review",
+      channel: "inApp",
+      critical: true,
     });
+    const allowEmail = shouldSendNotification(preference, {
+      eventKey: "new_review",
+      channel: "email",
+      critical: true,
+    });
+
+    let createdNotification = null;
+    if (allowInApp) {
+      createdNotification = await NotificationHistory.create({
+        retailer: updatedProduct.owner,
+        buyer: req.user.id,
+        product: updatedProduct._id,
+        reviewIndex: latestReviewIndex,
+        isRead: false,
+      });
+    }
     const latestReview = updatedProduct.reviews[latestReviewIndex];
     emitReviewCreated({
       productId: updatedProduct._id,
@@ -102,24 +146,37 @@ export const addProductReview = async (req, res) => {
         createdAt: latestReview.createdAt,
       },
     });
-    emitRetailerNotificationCreated({
-      retailerId: updatedProduct.owner,
-      notification: {
-        id: String(createdNotification._id),
-        productId: String(updatedProduct._id),
-        productName: updatedProduct.name || "Product unavailable",
-        reviewIndex: latestReviewIndex,
-        buyerName: currentUserName || "Buyer",
-        rating: Number(latestReview.rating || 0),
-        comment: latestReview.comment || "",
-        reviewCreatedAt: latestReview.createdAt,
-        createdAt: createdNotification.createdAt,
-        replied: false,
-        isRead: false,
-        reviewAvailable: true,
-        href: `/products/${updatedProduct._id}`,
-      },
-    });
+    if (createdNotification) {
+      emitRetailerNotificationCreated({
+        retailerId: updatedProduct.owner,
+        notification: {
+          id: String(createdNotification._id),
+          productId: String(updatedProduct._id),
+          productName: updatedProduct.name || "Product unavailable",
+          reviewIndex: latestReviewIndex,
+          buyerName: currentUserName || "Buyer",
+          rating: Number(latestReview.rating || 0),
+          comment: latestReview.comment || "",
+          reviewCreatedAt: latestReview.createdAt,
+          createdAt: createdNotification.createdAt,
+          replied: false,
+          isRead: false,
+          reviewAvailable: true,
+          href: `/products/${updatedProduct._id}`,
+        },
+      });
+    }
+
+    if (allowEmail) {
+      const retailer = await User.findById(updatedProduct.owner).select("email name");
+      if (retailer?.email) {
+        await sendEmailIfConfigured({
+          to: retailer.email,
+          subject: `New review pending reply: ${updatedProduct.name}`,
+          text: `Buyer ${currentUserName} posted a ${parsedRating}/5 review on "${updatedProduct.name}". Please reply from your retailer notifications panel.`,
+        });
+      }
+    }
 
     req.flash("success", "Review added successfully");
     return res.redirect(`/products/${id}`);
