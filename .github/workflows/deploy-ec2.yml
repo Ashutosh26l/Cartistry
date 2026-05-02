@@ -1,0 +1,61 @@
+name: Deploy To EC2
+
+on:
+  push:
+    branches:
+      - prod-ec2
+
+concurrency:
+  group: deploy-prod-ec2
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+
+      - name: Add EC2 Host To known_hosts
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${EC2_PORT:-22}" "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync Repo To EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude ".git" \
+            --exclude "node_modules" \
+            --exclude "server/node_modules" \
+            ./ "$EC2_USER@$EC2_HOST:/var/www/ecommerce" \
+            -e "ssh -p ${EC2_PORT:-22}"
+
+      - name: Upload Production Env File
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_ENV_FILE: ${{ secrets.EC2_ENV_FILE }}
+        run: |
+          printf '%s\n' "$EC2_ENV_FILE" > /tmp/.env.prod
+          scp -P "${EC2_PORT:-22}" /tmp/.env.prod "$EC2_USER@$EC2_HOST:/var/www/ecommerce/deploy/.env.prod"
+
+      - name: Run Deploy Script On EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_PORT: ${{ secrets.EC2_PORT }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -p "${EC2_PORT:-22}" "$EC2_USER@$EC2_HOST" "chmod +x /var/www/ecommerce/deploy/deploy.sh && /var/www/ecommerce/deploy/deploy.sh"
