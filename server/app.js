@@ -64,6 +64,8 @@ app.use(
         imgSrc: ["'self'", "data:", "https:"],
         connectSrc: ["'self'", "ws:", "wss:"],
         objectSrc: ["'none'"],
+        // Keep app on HTTP until real TLS is configured.
+        upgradeInsecureRequests: null,
       },
     },
     // Do not force HTTPS unless TLS is actually configured at the edge.
