@@ -66,6 +66,8 @@ app.use(
         objectSrc: ["'none'"],
       },
     },
+    // Do not force HTTPS unless TLS is actually configured at the edge.
+    hsts: process.env.ENABLE_HSTS === "true",
   })
 );
 // Populate current user from session/JWT and make CSRF token available on safe requests.
