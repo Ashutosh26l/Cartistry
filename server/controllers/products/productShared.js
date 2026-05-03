@@ -186,7 +186,9 @@ const getAvailabilityQuery = (availability) => {
 };
 
 const getSortDefinition = (sort, hasQuery) => {
-  if (sort === "relevance" && hasQuery) return { score: { $meta: "textScore" } };
+  // The products page currently uses regex-based query matching, not $text search.
+  // Sorting by textScore without a $text predicate causes runtime 500 errors.
+  if (sort === "relevance" && hasQuery) return { createdAt: -1 };
   if (sort === "price_asc") return { price: 1, createdAt: -1 };
   if (sort === "price_desc") return { price: -1, createdAt: -1 };
   if (sort === "name_asc") return { name: 1, createdAt: -1 };
