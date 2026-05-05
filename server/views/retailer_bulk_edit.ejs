@@ -1,17 +1,17 @@
 <%- include("partials/header", { title: "Retailer Bulk Edit" }) %>
 
-<section class="max-w-6xl mx-auto py-10">
+<section class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
   <%- include("partials/flash") %>
   <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
     <div>
       <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Retailer Operations</p>
-      <h1 class="text-3xl font-bold text-slate-900 mt-1">Bulk Edit Products</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">Bulk Edit Products</h1>
       <p class="text-slate-500 mt-2">Select products and apply one operation at scale.</p>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
       <form method="POST" action="/retailer/bulk/edit/preview" id="bulkEditPreviewForm">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -36,12 +36,12 @@
         <textarea id="selectedIdsField" name="selectedIds" rows="3" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs" placeholder="Selected IDs will appear here..."><%= (selectedIds || []).join(",") %></textarea>
 
         <div class="mt-4">
-          <button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2">Preview Changes</button>
+          <button type="submit" class="w-full sm:w-auto rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2">Preview Changes</button>
         </div>
       </form>
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-2xl p-6">
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
       <h2 class="text-lg font-bold text-slate-900">Quick Tips</h2>
       <ul class="mt-3 text-sm text-slate-600 space-y-2">
         <li>Price % accepts negative and positive values.</li>
@@ -51,9 +51,9 @@
     </div>
   </div>
 
-  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-6">
-    <h2 class="text-xl font-bold text-slate-900">Product Selection</h2>
-    <div class="mt-4 max-h-[380px] overflow-auto rounded-lg border border-slate-200">
+  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
+    <h2 class="text-lg sm:text-xl font-bold text-slate-900">Product Selection</h2>
+    <div class="hidden md:block mt-4 max-h-[380px] overflow-auto rounded-lg border border-slate-200">
       <table class="min-w-full text-sm">
         <thead class="bg-slate-50">
           <tr>
@@ -85,12 +85,32 @@
         </tbody>
       </table>
     </div>
+
+    <div class="md:hidden mt-4 space-y-3">
+      <% if (products && products.length) { %>
+      <% products.forEach(function(product) { %>
+      <label class="block rounded-xl border border-slate-200 p-3 bg-white">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="font-semibold text-slate-900 break-words"><%= product.name %></p>
+            <p class="text-sm text-slate-500 mt-1">Brand: <%= product.brand || "-" %></p>
+            <p class="text-sm text-slate-500">Price: &#8377; <%= product.price %></p>
+            <p class="text-sm text-slate-500">Qty: <%= product.quantity %></p>
+          </div>
+          <input type="checkbox" class="bulk-product-checkbox h-5 w-5 shrink-0 mt-1" value="<%= product._id %>" <%= selectedIds && selectedIds.includes(String(product._id)) ? "checked" : "" %> />
+        </div>
+      </label>
+      <% }); %>
+      <% } else { %>
+      <div class="rounded-xl border border-slate-200 p-4 text-sm text-slate-500">No products available.</div>
+      <% } %>
+    </div>
   </div>
 
   <% if (previewRows && previewRows.length) { %>
-  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-6">
-    <h2 class="text-xl font-bold text-slate-900">Preview Result</h2>
-    <div class="mt-4 max-h-[360px] overflow-auto rounded-lg border border-slate-200">
+  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
+    <h2 class="text-lg sm:text-xl font-bold text-slate-900">Preview Result</h2>
+    <div class="hidden md:block mt-4 max-h-[360px] overflow-auto rounded-lg border border-slate-200">
       <table class="min-w-full text-sm">
         <thead class="bg-slate-50">
           <tr>
@@ -115,12 +135,28 @@
       </table>
     </div>
 
+    <div class="md:hidden mt-4 space-y-3">
+      <% previewRows.forEach(function(item) { %>
+      <div class="rounded-xl border border-slate-200 p-3">
+        <p class="font-semibold text-slate-900"><%= item.product.name %></p>
+        <div class="mt-2 text-xs text-slate-600">
+          <p class="font-medium text-slate-800">Before</p>
+          <p>Price: <%= item.before.price %>, Qty: <%= item.before.quantity %>, Category: <%= item.before.category || "-" %>, Brand: <%= item.before.brand || "-" %></p>
+        </div>
+        <div class="mt-2 text-xs text-slate-600">
+          <p class="font-medium text-slate-800">After</p>
+          <p>Price: <%= item.after.price %>, Qty: <%= item.after.quantity %>, Category: <%= item.after.category || "-" %>, Brand: <%= item.after.brand || "-" %></p>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+
     <form method="POST" action="/retailer/bulk/edit/apply" class="mt-5">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <input type="hidden" name="operation" value="<%= operation %>" />
       <input type="hidden" name="operationValue" value="<%= operationValue %>" />
       <input type="hidden" name="selectedIds" value="<%= (selectedIds || []).join(",") %>" />
-      <button type="submit" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2">Apply Changes</button>
+      <button type="submit" class="w-full sm:w-auto rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2">Apply Changes</button>
     </form>
   </div>
   <% } %>
@@ -129,19 +165,30 @@
 <script>
   (function () {
     const field = document.getElementById("selectedIdsField");
-    const checkboxes = document.querySelectorAll(".bulk-product-checkbox");
+    const checkboxes = Array.from(document.querySelectorAll(".bulk-product-checkbox"));
     if (!field || !checkboxes.length) return;
-    const sync = () => {
-      const selected = [];
+    const syncLinkedCheckboxes = (source) => {
       checkboxes.forEach((box) => {
-        if (box.checked) selected.push(box.value);
+        if (box !== source && box.value === source.value) {
+          box.checked = source.checked;
+        }
       });
-      field.value = selected.join(",");
     };
-    checkboxes.forEach((box) => box.addEventListener("change", sync));
+    const sync = () => {
+      const selected = new Set();
+      checkboxes.forEach((box) => {
+        if (box.checked) selected.add(box.value);
+      });
+      field.value = Array.from(selected).join(",");
+    };
+    checkboxes.forEach((box) =>
+      box.addEventListener("change", () => {
+        syncLinkedCheckboxes(box);
+        sync();
+      })
+    );
     sync();
   })();
 </script>
 
 <%- include("partials/footer") %>
-

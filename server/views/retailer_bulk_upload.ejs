@@ -1,19 +1,19 @@
 <%- include("partials/header", { title: "Retailer Bulk Upload" }) %>
 
-<section class="max-w-6xl mx-auto py-10">
+<section class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
   <%- include("partials/flash") %>
 
   <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
     <div>
       <p class="text-sm uppercase tracking-[0.2em] text-slate-500">Retailer Operations</p>
-      <h1 class="text-3xl font-bold text-slate-900 mt-1">Bulk Product Upload</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">Bulk Product Upload</h1>
       <p class="text-slate-500 mt-2">Paste CSV text or load from file, preview, then commit.</p>
     </div>
-    <a href="/retailer/bulk/template.csv" class="rounded-lg border border-slate-300 hover:border-indigo-500 px-4 py-2 text-slate-700">Download Template</a>
+    <a href="/retailer/bulk/template.csv" class="w-full sm:w-auto text-center rounded-lg border border-slate-300 hover:border-indigo-500 px-4 py-2 text-slate-700">Download Template</a>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
       <form method="POST" action="/retailer/bulk/upload/preview" class="space-y-4">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <div>
@@ -30,13 +30,13 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700">CSV Text</label>
-          <textarea id="csvTextField" name="csvText" rows="14" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs" placeholder="Paste CSV content here..." required><%= csvText || "" %></textarea>
+          <textarea id="csvTextField" name="csvText" rows="14" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs sm:text-sm" placeholder="Paste CSV content here..." required><%= csvText || "" %></textarea>
         </div>
-        <button type="submit" class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2">Preview Import</button>
+        <button type="submit" class="w-full sm:w-auto rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2">Preview Import</button>
       </form>
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-2xl p-6">
+    <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
       <h2 class="text-lg font-bold text-slate-900">CSV Rules</h2>
       <ul class="mt-3 text-sm text-slate-600 space-y-2">
         <li>Header row required</li>
@@ -51,8 +51,8 @@
   </div>
 
   <% if (preview) { %>
-  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-6">
-    <h2 class="text-xl font-bold text-slate-900">Preview Summary</h2>
+  <div class="mt-8 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
+    <h2 class="text-lg sm:text-xl font-bold text-slate-900">Preview Summary</h2>
     <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="rounded-lg border border-slate-200 p-3">
         <p class="text-sm text-slate-500">Total Rows</p>
@@ -81,7 +81,7 @@
     <% if (preview.errors && preview.errors.length) { %>
     <div class="mt-6">
       <h3 class="font-semibold text-slate-900">Error Rows</h3>
-      <div class="mt-2 max-h-56 overflow-auto rounded-lg border border-slate-200">
+      <div class="hidden sm:block mt-2 max-h-56 overflow-auto rounded-lg border border-slate-200">
         <table class="min-w-full text-sm">
           <thead class="bg-slate-50">
             <tr>
@@ -99,6 +99,14 @@
           </tbody>
         </table>
       </div>
+      <div class="sm:hidden mt-2 space-y-2">
+        <% preview.errors.forEach(function(item) { %>
+        <div class="rounded-lg border border-slate-200 p-3">
+          <p class="text-xs font-semibold text-slate-700">Line <%= item.lineNumber %></p>
+          <p class="text-sm text-slate-600 mt-1 break-words"><%= item.message %></p>
+        </div>
+        <% }); %>
+      </div>
     </div>
     <% } %>
 
@@ -107,7 +115,7 @@
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <input type="hidden" name="mode" value="<%= mode %>" />
         <textarea name="csvText" class="hidden"><%= csvText || "" %></textarea>
-        <button type="submit" class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2">Commit Import</button>
+        <button type="submit" class="w-full sm:w-auto rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2">Commit Import</button>
       </form>
     </div>
   </div>
@@ -132,4 +140,3 @@
 </script>
 
 <%- include("partials/footer") %>
-
