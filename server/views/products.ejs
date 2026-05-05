@@ -58,8 +58,19 @@ const currentQueryPath = queryForLink(pager.page || 1);
       <% } %>
     </div>
 
+    <div class="mb-4 grid grid-cols-2 gap-3 lg:hidden">
+      <button id="mobileFilterToggle" type="button" class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm">
+        <span>Filter</span>
+        <span id="mobileFilterToggleIcon" class="text-slate-500">+</span>
+      </button>
+      <button id="mobileSortToggle" type="button" class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm">
+        <span>Sort</span>
+        <span id="mobileSortToggleIcon" class="text-slate-500">+</span>
+      </button>
+    </div>
+
     <div class="catalog-shell">
-      <aside class="lg:sticky lg:top-24">
+      <aside id="mobileFilterPanel" class="hidden lg:block lg:sticky lg:top-24">
         <form action="/products/allProducts" method="get" class="rounded-[28px] border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
             <div>
@@ -173,7 +184,7 @@ const currentQueryPath = queryForLink(pager.page || 1);
       </aside>
 
       <div>
-        <form action="/products/allProducts" method="get" class="mb-5 rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <form id="mobileSortPanel" action="/products/allProducts" method="get" class="hidden lg:block mb-5 rounded-[28px] border border-slate-200 bg-white px-5 py-4 shadow-sm">
           <input type="hidden" name="q" value="<%= filters.q || '' %>" />
           <input type="hidden" name="category" value="<%= filters.category || '' %>" />
           <input type="hidden" name="brand" value="<%= filters.brand || '' %>" />
@@ -211,52 +222,52 @@ const currentQueryPath = queryForLink(pager.page || 1);
           </div>
         </form>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div class="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6">
       <% if (allProducts && allProducts.length > 0) { %>
       <% allProducts.forEach(function(item) { %>
-      <div class="relative bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all" data-animate-card>
+      <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all" data-animate-card>
         <% if (isBuyer) { %>
-        <form action="/products/<%= item._id %>/wishlist" method="POST" class="absolute top-3 left-3 z-10">
+        <form action="/products/<%= item._id %>/wishlist" method="POST" class="absolute top-2 sm:top-3 left-2 sm:left-3 z-10">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <input type="hidden" name="redirectTo" value="<%= currentQueryPath %>" />
           <button
             type="submit"
             aria-label="<%= item.isWishlisted ? 'Remove from wishlist' : 'Add to wishlist' %>"
-            class="h-10 w-10 rounded-full border border-slate-200 bg-white text-2xl leading-none shadow-md hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center <%= item.isWishlisted ? 'text-rose-600 ring-2 ring-rose-200' : 'text-slate-700' %>"
+            class="h-8 w-8 sm:h-10 sm:w-10 rounded-full border border-slate-200 bg-white text-lg sm:text-2xl leading-none shadow-md hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center <%= item.isWishlisted ? 'text-rose-600 ring-2 ring-rose-200' : 'text-slate-700' %>"
           >
             <%- item.isWishlisted ? '&#9829;' : '&#9825;' %>
           </button>
         </form>
         <% } %>
         <a href="/products/<%= item._id %>" class="block">
-          <div class="product-image-wrap relative h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center overflow-hidden">
+          <div class="product-image-wrap relative h-32 sm:h-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center overflow-hidden">
             <img src="<%= item.primaryImage %>" alt="<%= item.name %>" class="product-image w-full h-full object-cover" />
-            <span class="absolute top-3 right-3 <%= item.isAvailable ? 'bg-green-500' : 'bg-red-500' %> text-white px-3 py-1 rounded-full text-sm font-medium">
+            <span class="absolute top-2 sm:top-3 right-2 sm:right-3 <%= item.isAvailable ? 'bg-green-500' : 'bg-red-500' %> text-white px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-sm font-medium">
               <%= item.stockLabel || (item.isAvailable ? 'In Stock' : 'Out of Stock') %>
             </span>
           </div>
 
-          <div class="p-5 space-y-4">
+          <div class="p-3 sm:p-5 space-y-2 sm:space-y-4">
             <div>
-              <h3 class="text-xl font-bold text-gray-900"><%= item.name %></h3>
-              <p class="text-gray-500 mt-1">Warranty: <%= item.warranty %> years</p>
-              <p class="text-gray-500 mt-1">Category: <%= item.category || 'General' %> &bull; Brand: <%= item.brand || 'Unbranded' %></p>
-              <p class="text-sm mt-1 <%= item.isAvailable ? 'text-emerald-700' : 'text-rose-700' %>">Stock: <%= typeof item.stockQuantity === "number" ? item.stockQuantity : 0 %></p>
-              <p class="text-sm mt-1 text-slate-500"><%= item.deliveryEta || '' %></p>
+              <h3 class="text-base sm:text-xl font-bold text-gray-900 leading-tight"><%= item.name %></h3>
+              <p class="hidden sm:block text-gray-500 mt-1">Warranty: <%= item.warranty %> years</p>
+              <p class="text-xs sm:text-base text-gray-500 mt-1">Category: <%= item.category || 'General' %><span class="hidden sm:inline"> &bull; Brand: <%= item.brand || 'Unbranded' %></span></p>
+              <p class="text-xs sm:text-sm mt-1 <%= item.isAvailable ? 'text-emerald-700' : 'text-rose-700' %>">Stock: <%= typeof item.stockQuantity === "number" ? item.stockQuantity : 0 %></p>
+              <p class="hidden sm:block text-sm mt-1 text-slate-500"><%= item.deliveryEta || '' %></p>
             </div>
 
             <div class="flex justify-between items-center">
-              <p class="text-2xl font-bold text-gray-900">&#8377; <%= item.price %></p>
-              <div class="flex items-center gap-1"><span class="text-yellow-400">&#9733;&#9733;&#9733;&#9733;&#9733;</span></div>
+              <p class="text-lg sm:text-2xl font-bold text-gray-900">&#8377; <%= item.price %></p>
+              <div class="flex items-center gap-1"><span class="text-[13px] sm:text-base text-yellow-400">&#9733;&#9733;&#9733;&#9733;&#9733;</span></div>
             </div>
 
-            <span class="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors">View Details</span>
+            <span class="block w-full text-center bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-medium py-2 sm:py-3 rounded-lg transition-colors">View Details</span>
           </div>
         </a>
       </div>
       <% }); %>
       <% } else { %>
-      <div class="text-center py-12">
+      <div class="col-span-full text-center py-12">
         <p class="text-gray-500 text-xl">No products available with current filters.</p>
       </div>
       <% } %>
@@ -277,6 +288,34 @@ const currentQueryPath = queryForLink(pager.page || 1);
     const groups = document.querySelectorAll(".filter-group");
     const brandPreviewSelect = document.getElementById("brandPreviewSelect");
     const brandInputs = document.querySelectorAll('input[type="radio"][name="brand"]');
+    const mobileFilterToggle = document.getElementById("mobileFilterToggle");
+    const mobileFilterToggleIcon = document.getElementById("mobileFilterToggleIcon");
+    const mobileSortToggle = document.getElementById("mobileSortToggle");
+    const mobileSortToggleIcon = document.getElementById("mobileSortToggleIcon");
+    const mobileFilterPanel = document.getElementById("mobileFilterPanel");
+    const mobileSortPanel = document.getElementById("mobileSortPanel");
+
+    const setMobilePanelState = (panel, icon, shouldOpen) => {
+      if (!panel || !icon) return;
+      panel.classList.toggle("hidden", !shouldOpen);
+      icon.textContent = shouldOpen ? "-" : "+";
+    };
+
+    if (mobileFilterToggle && mobileFilterPanel) {
+      mobileFilterToggle.addEventListener("click", () => {
+        const nextOpen = mobileFilterPanel.classList.contains("hidden");
+        setMobilePanelState(mobileFilterPanel, mobileFilterToggleIcon, nextOpen);
+        setMobilePanelState(mobileSortPanel, mobileSortToggleIcon, false);
+      });
+    }
+
+    if (mobileSortToggle && mobileSortPanel) {
+      mobileSortToggle.addEventListener("click", () => {
+        const nextOpen = mobileSortPanel.classList.contains("hidden");
+        setMobilePanelState(mobileSortPanel, mobileSortToggleIcon, nextOpen);
+        setMobilePanelState(mobileFilterPanel, mobileFilterToggleIcon, false);
+      });
+    }
 
     groups.forEach((group, index) => {
       const toggle = group.querySelector(".filter-group-toggle");
@@ -310,6 +349,7 @@ const currentQueryPath = queryForLink(pager.page || 1);
         });
       });
     }
+
   })();
 </script>
 

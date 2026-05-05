@@ -29,8 +29,8 @@
           <div class="flex-1 min-w-0">
             <h2 class="text-lg font-semibold text-slate-900 truncate"><%= item.product.name %></h2>
             <p class="text-sm text-slate-500 mt-1">Unit price: &#8377; <%= item.product.price %></p>
-            <div class="mt-3 flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
+            <div class="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div class="flex flex-wrap items-center gap-2">
                 <form method="POST" action="/products/<%= item.product._id %>/cart/update" class="inline-flex">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                   <input type="hidden" name="action" value="decrease" />
@@ -55,7 +55,7 @@
                   <button type="submit" class="text-sm font-medium text-rose-600 hover:text-rose-700">Remove</button>
                 </form>
               </div>
-              <p class="text-xl font-bold text-slate-900">&#8377; <%= lineTotal %></p>
+              <p class="text-xl font-bold text-slate-900 self-end sm:self-auto">&#8377; <%= lineTotal %></p>
             </div>
           </div>
         </div>
