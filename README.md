@@ -26,6 +26,7 @@ The codebase supports both:
 | Password Hashing | bcryptjs |
 | Sessions / Flash | express-session + connect-flash |
 | Security | Helmet, custom CSRF middleware, express-rate-limit, cookie-parser, CORS |
+| Email | Nodemailer (optional SMTP notifications) |
 | Realtime | Socket.IO (WebSocket/polling fallback) |
 | Styling | Tailwind CSS `4.x` config + custom CSS/JS |
 | Frontend libs (installed) | GSAP, Howler, Three.js, Vue 3, Pinia |
@@ -47,6 +48,9 @@ The codebase supports both:
 - Buyer notification center (new replies + conversation history) with realtime updates
 - Buyer online popup alert when retailer replies
 - Offline-safe notification persistence in `notificationHistory` (combined history model)
+- Retailer analytics dashboard + analytics APIs (overview, top products, conversion)
+- Retailer bulk product upload via CSV (preview + commit) and bulk edit operations
+- Retailer notification preferences (page + API patch)
 - Flash messages for UX feedback
 - Theme toggle + frontend behavior scripts
 - Health endpoints for app/API checks
@@ -67,30 +71,43 @@ Ecommerce(sem-6)/
 |   |   `-- session.js
 |   |-- controllers/
 |   |   |-- authController.js
+|   |   |-- debugController.js
 |   |   |-- siteController.js
 |   |   |-- productController.js
+|   |   |-- retailer/
 |   |   `-- products/
 |   |-- middleware/
 |   |   |-- auth.js
 |   |   |-- csrf.js
+|   |   |-- errorHandlers.js
 |   |   |-- rateLimit.js
 |   |   |-- flashMessages.js
+|   |   |-- retailerNotifications.js
 |   |   `-- validation/
 |   |-- models/
 |   |   |-- userModel.js
 |   |   |-- productModel.js
+|   |   |-- orderModel.js
+|   |   |-- retailerEventModel.js
+|   |   |-- retailerPreferenceModel.js
 |   |   `-- notificationHistoryModel.js
 |   |-- routes/
 |   |   |-- authRoutes.js
 |   |   |-- productRoutes.js
 |   |   |-- productApiRoutes.js
 |   |   |-- siteRoutes.js
+|   |   |-- retailerRoutes.js
 |   |   `-- debugRoutes.js
 |   |-- scripts/
 |   |   `-- backfillNotificationHistory.js
+|   |-- Dockerfile
 |   |-- public/
 |   |-- views/
-|   |   `-- buyer_notifications.ejs
+|   |   |-- buyer_notifications.ejs
+|   |   |-- retailer_analytics.ejs
+|   |   |-- retailer_bulk_upload.ejs
+|   |   |-- retailer_bulk_edit.ejs
+|   |   `-- retailer_notification_preferences.ejs
 |   `-- tailwind.config.js
 `-- README.md
 ```
@@ -157,6 +174,23 @@ If a user is offline, notifications are still persisted in `notificationHistory`
 - `PATCH /:id`
 - `DELETE /:id`
 
+### Retailer Pages/APIs (`/retailer`, `/api/retailer`) - retailer scoped
+- `GET /retailer/analytics`
+- `GET /retailer/bulk/upload`
+- `GET /retailer/bulk/template.csv`
+- `POST /retailer/bulk/upload/preview`
+- `POST /retailer/bulk/upload/commit`
+- `GET /retailer/bulk/edit`
+- `POST /retailer/bulk/edit/preview`
+- `POST /retailer/bulk/edit/apply`
+- `GET /retailer/notification-preferences`
+- `POST /retailer/notification-preferences`
+- `GET /api/retailer/analytics/overview`
+- `GET /api/retailer/analytics/top-products`
+- `GET /api/retailer/analytics/conversion`
+- `GET /api/retailer/notification-preferences`
+- `PATCH /api/retailer/notification-preferences`
+
 ## Environment Variables
 Create `server/.env`:
 
@@ -168,6 +202,12 @@ SESSION_SECRET=replace_with_strong_secret
 COOKIE_SECRET=replace_with_strong_secret
 CORS_ORIGIN=http://localhost:5500
 NODE_ENV=development
+ENABLE_HSTS=false
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
 ```
 
 Notes:
