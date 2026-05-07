@@ -10,6 +10,94 @@
     background-color: #dbeafe;
     color: #1d4ed8;
   }
+  .filter-chip {
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  }
+  html.dark .filter-chip {
+    border-color: #2b3a55 !important;
+    background-color: #0b1220 !important;
+    color: #dbe7ff !important;
+  }
+  html.dark .filter-chip-active {
+    border-color: #7dd3fc !important;
+    background-color: rgba(8, 145, 178, 0.28) !important;
+    color: #e0f7ff !important;
+    box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.24);
+  }
+  .price-range {
+    --min-position: 0%;
+    --max-position: 100%;
+    position: relative;
+  }
+  .price-range-track {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 6px;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    background: #dbeafe;
+  }
+  .price-range-track::after {
+    content: "";
+    position: absolute;
+    left: var(--min-position);
+    right: calc(100% - var(--max-position));
+    top: 0;
+    bottom: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #06b6d4, #2563eb);
+  }
+  .price-range-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    appearance: none;
+    background: transparent;
+    pointer-events: none;
+  }
+  .price-range-input::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+    appearance: none;
+    border: 4px solid #ffffff;
+    border-radius: 999px;
+    background: #0891b2;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+    cursor: grab;
+    pointer-events: auto;
+  }
+  .price-range-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 4px solid #ffffff;
+    border-radius: 999px;
+    background: #0891b2;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+    cursor: grab;
+    pointer-events: auto;
+  }
+  .price-range-input::-moz-range-track {
+    background: transparent;
+  }
+  html.dark .price-range-track {
+    background: #23324a;
+  }
+  html.dark .price-range-card {
+    border-color: #2b3a55 !important;
+    background-color: rgba(8, 145, 178, 0.12) !important;
+  }
+  html.dark .price-range-input::-webkit-slider-thumb {
+    border-color: #0b1220;
+    background: #67e8f9;
+  }
+  html.dark .price-range-input::-moz-range-thumb {
+    border-color: #0b1220;
+    background: #67e8f9;
+  }
   .product-image {
     transition: transform 450ms ease;
     transform-origin: center;
@@ -31,6 +119,12 @@ const isRetailer = currentUser && (currentUser.role === "retailer" || currentUse
 const isBuyer = currentUser && currentUser.role === "buyer";
 const filters = selectedFilters || {};
 const pager = pagination || { page: 1, totalPages: 1, hasPrev: false, hasNext: false, prevPage: 1, nextPage: 1, totalItems: 0 };
+const bounds = priceBounds || { min: 0, max: 1000 };
+const priceMinLimit = Math.max(0, Math.floor(Number(bounds.min) || 0));
+const rawPriceMaxLimit = Math.ceil(Number(bounds.max) || 1000);
+const priceMaxLimit = Math.max(priceMinLimit + 1, rawPriceMaxLimit);
+const selectedMinPrice = filters.minPrice ? Math.min(priceMaxLimit, Math.max(priceMinLimit, Number(filters.minPrice))) : priceMinLimit;
+const selectedMaxPrice = filters.maxPrice ? Math.min(priceMaxLimit, Math.max(selectedMinPrice, Number(filters.maxPrice))) : priceMaxLimit;
 const queryForLink = (targetPage) => {
   const params = new URLSearchParams();
   if (filters.q) params.set("q", filters.q);
@@ -80,10 +174,7 @@ const currentQueryPath = queryForLink(pager.page || 1);
             <a href="/products/allProducts" class="text-sm font-medium text-cyan-600 hover:text-cyan-700">Clear</a>
           </div>
 
-          <div class="p-5 border-b border-slate-100">
-            <label class="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 mb-3">Search</label>
-            <input type="text" name="q" value="<%= filters.q || '' %>" placeholder="Search products..." class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:bg-white" />
-          </div>
+          <input type="hidden" name="q" value="<%= filters.q || '' %>" />
 
           <div class="filter-group border-b border-slate-100">
             <button type="button" class="filter-group-toggle w-full flex items-center justify-between px-5 py-4 text-left">
@@ -92,7 +183,7 @@ const currentQueryPath = queryForLink(pager.page || 1);
             </button>
             <div class="filter-group-body px-5 pb-5">
               <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 mb-4">
-                <select id="brandPreviewSelect" class="w-full bg-transparent text-sm text-slate-700 focus:outline-none">
+                <select id="brandPreviewSelect" name="brand" class="w-full bg-transparent text-sm text-slate-700 focus:outline-none">
                   <option value="">All brands</option>
                   <% (brands || []).forEach(function(option) { %>
                     <option value="<%= option %>" <%= filters.brand === option ? 'selected' : '' %>><%= option %></option>
@@ -103,7 +194,7 @@ const currentQueryPath = queryForLink(pager.page || 1);
                 <% (brands || []).slice(0, 8).forEach(function(option) { %>
                   <label class="flex items-center justify-between rounded-xl px-3 py-2 border <%= filters.brand === option ? 'border-cyan-400 bg-cyan-50 text-cyan-700' : 'border-transparent hover:border-slate-200 text-slate-700' %>">
                     <span class="flex items-center gap-3">
-                      <input type="radio" name="brand" value="<%= option %>" class="h-4 w-4 accent-cyan-600" <%= filters.brand === option ? 'checked' : '' %> />
+                      <input type="radio" name="brandOption" value="<%= option %>" class="h-4 w-4 accent-cyan-600" <%= filters.brand === option ? 'checked' : '' %> />
                       <span class="text-sm font-medium"><%= option %></span>
                     </span>
                     <span class="text-xs text-slate-400"><%= option.length %></span>
@@ -122,12 +213,12 @@ const currentQueryPath = queryForLink(pager.page || 1);
               <div class="flex flex-wrap gap-2">
                 <label class="cursor-pointer">
                   <input type="radio" name="category" value="" class="sr-only" <%= !filters.category ? 'checked' : '' %> />
-                  <span class="block rounded-full border px-4 py-2 text-sm <%= !filters.category ? 'filter-chip-active' : 'border-slate-200 text-slate-700' %>">All</span>
+                  <span class="filter-chip block rounded-full border px-4 py-2 text-sm <%= !filters.category ? 'filter-chip-active' : 'border-slate-200 text-slate-700' %>">All</span>
                 </label>
                 <% (categories || []).forEach(function(option) { %>
                   <label class="cursor-pointer">
                     <input type="radio" name="category" value="<%= option %>" class="sr-only" <%= filters.category === option ? 'checked' : '' %> />
-                    <span class="block rounded-full border px-4 py-2 text-sm <%= filters.category === option ? 'filter-chip-active' : 'border-slate-200 text-slate-700' %>"><%= option %></span>
+                    <span class="filter-chip block rounded-full border px-4 py-2 text-sm <%= filters.category === option ? 'filter-chip-active' : 'border-slate-200 text-slate-700' %>"><%= option %></span>
                   </label>
                 <% }); %>
               </div>
@@ -140,15 +231,43 @@ const currentQueryPath = queryForLink(pager.page || 1);
               <span class="text-slate-400 text-xl leading-none">+</span>
             </button>
             <div class="filter-group-body px-5 pb-5 hidden">
-              <div class="h-20 rounded-2xl bg-[linear-gradient(180deg,rgba(34,211,238,0.12),rgba(255,255,255,0.03))] border border-cyan-100 mb-4 relative overflow-hidden">
-                <div class="absolute inset-x-4 bottom-5 h-1 rounded-full bg-cyan-100"></div>
-                <div class="absolute left-[18%] right-[22%] bottom-5 h-1 rounded-full bg-cyan-500"></div>
-                <div class="absolute left-[18%] bottom-[14px] h-4 w-4 rounded-full border-4 border-white bg-cyan-500 shadow"></div>
-                <div class="absolute right-[22%] bottom-[14px] h-4 w-4 rounded-full border-4 border-white bg-cyan-500 shadow"></div>
+              <div class="price-range-card rounded-2xl border border-cyan-100 bg-cyan-50/60 px-4 py-4 mb-4">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-500">
+                  <span data-min-price-label>&#8377; <%= selectedMinPrice %></span>
+                  <span data-max-price-label>&#8377; <%= selectedMaxPrice %></span>
+                </div>
+                <div
+                  class="price-range mt-4 h-11"
+                  data-price-range
+                  data-min="<%= priceMinLimit %>"
+                  data-max="<%= priceMaxLimit %>"
+                >
+                  <div class="price-range-track"></div>
+                  <input
+                    type="range"
+                    min="<%= priceMinLimit %>"
+                    max="<%= priceMaxLimit %>"
+                    step="1"
+                    value="<%= selectedMinPrice %>"
+                    class="price-range-input"
+                    data-price-min-range
+                    aria-label="Minimum price"
+                  />
+                  <input
+                    type="range"
+                    min="<%= priceMinLimit %>"
+                    max="<%= priceMaxLimit %>"
+                    step="1"
+                    value="<%= selectedMaxPrice %>"
+                    class="price-range-input"
+                    data-price-max-range
+                    aria-label="Maximum price"
+                  />
+                </div>
               </div>
               <div class="grid grid-cols-2 gap-3">
-                <input type="number" min="0" name="minPrice" value="<%= filters.minPrice || '' %>" placeholder="Min" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:bg-white" />
-                <input type="number" min="0" name="maxPrice" value="<%= filters.maxPrice || '' %>" placeholder="Max" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:bg-white" />
+                <input type="number" min="<%= priceMinLimit %>" max="<%= priceMaxLimit %>" name="minPrice" value="<%= selectedMinPrice %>" placeholder="Min" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:bg-white" data-price-min-input />
+                <input type="number" min="<%= priceMinLimit %>" max="<%= priceMaxLimit %>" name="maxPrice" value="<%= selectedMaxPrice %>" placeholder="Max" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:bg-white" data-price-max-input />
               </div>
             </div>
           </div>
@@ -287,7 +406,9 @@ const currentQueryPath = queryForLink(pager.page || 1);
   (function () {
     const groups = document.querySelectorAll(".filter-group");
     const brandPreviewSelect = document.getElementById("brandPreviewSelect");
-    const brandInputs = document.querySelectorAll('input[type="radio"][name="brand"]');
+    const brandInputs = document.querySelectorAll('input[type="radio"][name="brandOption"]');
+    const categoryInputs = document.querySelectorAll('input[type="radio"][name="category"]');
+    const priceRange = document.querySelector("[data-price-range]");
     const mobileFilterToggle = document.getElementById("mobileFilterToggle");
     const mobileFilterToggleIcon = document.getElementById("mobileFilterToggleIcon");
     const mobileSortToggle = document.getElementById("mobileSortToggle");
@@ -323,7 +444,12 @@ const currentQueryPath = queryForLink(pager.page || 1);
       const icon = toggle ? toggle.querySelector("span:last-child") : null;
       if (!toggle || !body) return;
 
-      const isOpenByDefault = index === 0;
+      const hasCheckedOption = Boolean(body.querySelector('input[type="radio"]:checked:not([value=""])'));
+      const hasSelectedBrand = Boolean(body.querySelector('select[name="brand"] option:checked:not([value=""])'));
+      const hasChangedMinPrice = Boolean(body.querySelector("[data-price-min-input]")) && document.querySelector("[data-price-min-input]")?.value !== priceRange?.dataset.min;
+      const hasChangedMaxPrice = Boolean(body.querySelector("[data-price-max-input]")) && document.querySelector("[data-price-max-input]")?.value !== priceRange?.dataset.max;
+      const hasActiveInput = hasCheckedOption || hasSelectedBrand || hasChangedMinPrice || hasChangedMaxPrice;
+      const isOpenByDefault = hasActiveInput;
       body.classList.toggle("hidden", !isOpenByDefault);
       if (icon) icon.textContent = isOpenByDefault ? "-" : "+";
 
@@ -333,6 +459,22 @@ const currentQueryPath = queryForLink(pager.page || 1);
         if (icon) icon.textContent = shouldOpen ? "-" : "+";
       });
     });
+
+    const syncCategoryChips = () => {
+      categoryInputs.forEach((input) => {
+        const chip = input.nextElementSibling;
+        if (!chip) return;
+        const isActive = input.checked;
+        chip.classList.toggle("filter-chip-active", isActive);
+        chip.classList.toggle("border-slate-200", !isActive);
+        chip.classList.toggle("text-slate-700", !isActive);
+      });
+    };
+
+    categoryInputs.forEach((input) => {
+      input.addEventListener("change", syncCategoryChips);
+    });
+    syncCategoryChips();
 
     if (brandPreviewSelect && brandInputs.length > 0) {
       brandPreviewSelect.addEventListener("change", () => {
@@ -348,6 +490,50 @@ const currentQueryPath = queryForLink(pager.page || 1);
           brandPreviewSelect.value = input.value;
         });
       });
+    }
+
+    if (priceRange) {
+      const minRange = priceRange.querySelector("[data-price-min-range]");
+      const maxRange = priceRange.querySelector("[data-price-max-range]");
+      const minInput = document.querySelector("[data-price-min-input]");
+      const maxInput = document.querySelector("[data-price-max-input]");
+      const minLabel = document.querySelector("[data-min-price-label]");
+      const maxLabel = document.querySelector("[data-max-price-label]");
+      const lowerLimit = Number(priceRange.dataset.min || 0);
+      const upperLimit = Number(priceRange.dataset.max || 1000);
+      const priceFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
+
+      const clamp = (value) => Math.min(upperLimit, Math.max(lowerLimit, Number(value) || 0));
+      const updatePriceRange = (source) => {
+        if (!minRange || !maxRange || !minInput || !maxInput) return;
+        let minValue = clamp(source === "minInput" ? minInput.value : minRange.value);
+        let maxValue = clamp(source === "maxInput" ? maxInput.value : maxRange.value);
+
+        if (minValue > maxValue) {
+          if (source === "minRange" || source === "minInput") {
+            minValue = maxValue;
+          } else {
+            maxValue = minValue;
+          }
+        }
+
+        minRange.value = String(minValue);
+        maxRange.value = String(maxValue);
+        minInput.value = String(minValue);
+        maxInput.value = String(maxValue);
+
+        const span = Math.max(1, upperLimit - lowerLimit);
+        priceRange.style.setProperty("--min-position", `${((minValue - lowerLimit) / span) * 100}%`);
+        priceRange.style.setProperty("--max-position", `${((maxValue - lowerLimit) / span) * 100}%`);
+        if (minLabel) minLabel.textContent = `\u20b9 ${priceFormatter.format(minValue)}`;
+        if (maxLabel) maxLabel.textContent = `\u20b9 ${priceFormatter.format(maxValue)}`;
+      };
+
+      minRange?.addEventListener("input", () => updatePriceRange("minRange"));
+      maxRange?.addEventListener("input", () => updatePriceRange("maxRange"));
+      minInput?.addEventListener("input", () => updatePriceRange("minInput"));
+      maxInput?.addEventListener("input", () => updatePriceRange("maxInput"));
+      updatePriceRange("init");
     }
 
   })();

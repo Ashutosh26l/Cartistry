@@ -73,12 +73,18 @@ export const getAllProductsPage = async (req, res) => {
 
     const sortDefinition = getSortDefinition(sort, Boolean(q));
     const skip = (page - 1) * limit;
-    let [allProductsRaw, totalItems, allCategories, allBrands] = await Promise.all([
+    let [allProductsRaw, totalItems, allCategories, allBrands, lowestPriceProduct, highestPriceProduct] = await Promise.all([
       Product.find(query).sort(sortDefinition).skip(skip).limit(limit),
       Product.countDocuments(query),
       Product.distinct("category", baseQuery),
       Product.distinct("brand", baseQuery),
+      Product.findOne(baseQuery).sort({ price: 1 }).select("price").lean(),
+      Product.findOne(baseQuery).sort({ price: -1 }).select("price").lean(),
     ]);
+    const priceBounds = {
+      min: Math.max(0, Math.floor(Number(lowestPriceProduct?.price) || 0)),
+      max: Math.max(1000, Math.ceil(Number(highestPriceProduct?.price) || 1000)),
+    };
 
     const totalPages = Math.max(1, Math.ceil(totalItems / limit));
     const currentPage = Math.min(page, totalPages);
@@ -109,6 +115,7 @@ export const getAllProductsPage = async (req, res) => {
       categories: sanitizeList(allCategories),
       brands: sanitizeList(allBrands),
       selectedFilters,
+      priceBounds,
       pagination: {
         totalItems,
         totalPages,
