@@ -2,6 +2,57 @@ import Product from "../models/productModel.js";
 import NotificationHistory from "../models/notificationHistoryModel.js";
 import User from "../models/userModel.js";
 
+const buildFeaturedMatch = (extraMatch = {}) => ({
+  isAvailable: true,
+  quantity: { $gt: 0 },
+  ...extraMatch,
+});
+
+const buildFeaturedCandidatePipeline = (match, candidateLimit) => [
+  { $match: match },
+  {
+    $addFields: {
+      reviewCount: { $size: { $ifNull: ["$reviews", []] } },
+      averageRating: { $ifNull: [{ $avg: "$reviews.rating" }, 0] },
+      hasImage: {
+        $cond: [{ $or: [{ $ifNull: ["$image", false] }, { $gt: [{ $size: { $ifNull: ["$images", []] } }, 0] }] }, 1, 0],
+      },
+      recencyBonus: {
+        $cond: [{ $gte: [{ $toDate: "$_id" }, new Date(Date.now() - 1000 * 60 * 60 * 24 * 45)] }, 1, 0],
+      },
+    },
+  },
+  {
+    $addFields: {
+      featureScore: {
+        $add: [
+          { $multiply: ["$averageRating", 2] },
+          { $min: ["$reviewCount", 5] },
+          "$hasImage",
+          "$recencyBonus",
+        ],
+      },
+    },
+  },
+  { $sort: { featureScore: -1, _id: -1 } },
+  { $limit: candidateLimit },
+];
+
+const getFeaturedProducts = async ({ extraMatch = {}, featuredLimit = 6, candidateLimit = 40 }) => {
+  const match = buildFeaturedMatch(extraMatch);
+  const candidatePipeline = buildFeaturedCandidatePipeline(match, candidateLimit);
+  const candidates = await Product.aggregate(candidatePipeline);
+  if (candidates.length <= featuredLimit) {
+    return candidates;
+  }
+
+  const sampled = await Product.aggregate([
+    ...candidatePipeline,
+    { $sample: { size: featuredLimit } },
+  ]);
+  return sampled;
+};
+
 // Home route serves a role-based dashboard for logged-in users.
 export const renderHome = async (req, res) => {
   try {
@@ -12,7 +63,7 @@ export const renderHome = async (req, res) => {
     const userRole = res.locals.currentUser.role;
     if (userRole === "buyer") {
       const [featuredProducts, latestProducts] = await Promise.all([
-        Product.find({ isAvailable: true }).sort({ createdAt: -1 }).limit(6),
+        getFeaturedProducts({ featuredLimit: 6, candidateLimit: 48 }),
         Product.find().sort({ createdAt: -1 }).limit(4),
       ]);
 
@@ -23,7 +74,7 @@ export const renderHome = async (req, res) => {
     const [totalProducts, inStockProducts, featuredProducts, pendingNotifications, latestHistoryRaw] = await Promise.all([
       Product.countDocuments(ownerFilter),
       Product.countDocuments({ ...ownerFilter, isAvailable: true }),
-      Product.find(ownerFilter).sort({ _id: -1 }).limit(4),
+      getFeaturedProducts({ extraMatch: ownerFilter, featuredLimit: 4, candidateLimit: 20 }),
       NotificationHistory.countDocuments({ retailer: req.user.id, replied: false }),
       NotificationHistory.find({ retailer: req.user.id }).sort({ createdAt: -1 }).limit(5).lean(),
     ]);
