@@ -1,6 +1,8 @@
 import Product from "../models/productModel.js";
 import NotificationHistory from "../models/notificationHistoryModel.js";
 import User from "../models/userModel.js";
+import Order from "../models/orderModel.js";
+import mongoose from "mongoose";
 
 const buildFeaturedMatch = (extraMatch = {}) => ({
   isAvailable: true,
@@ -53,6 +55,80 @@ const getFeaturedProducts = async ({ extraMatch = {}, featuredLimit = 6, candida
   return sampled;
 };
 
+const toObjectIdIfValid = (value) => {
+  if (value instanceof mongoose.Types.ObjectId) return value;
+  return mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : value;
+};
+
+const getRetailerFeaturedProducts = async ({ retailerId, featuredLimit = 4 }) => {
+  const retailerObjectId = toObjectIdIfValid(retailerId);
+  const ownerFilter = { owner: retailerObjectId };
+
+  const allRetailerProducts = await Product.find(ownerFilter).lean();
+  if (!allRetailerProducts.length) return [];
+
+  const productIds = allRetailerProducts.map((item) => item._id);
+
+  const [purchaseAgg, wishlistAgg] = await Promise.all([
+    Order.aggregate([
+      { $match: { retailer: retailerObjectId, status: "placed" } },
+      { $unwind: "$items" },
+      { $match: { "items.product": { $in: productIds } } },
+      {
+        $group: {
+          _id: "$items.product",
+          purchaseCount: { $sum: "$items.quantity" },
+        },
+      },
+    ]),
+    User.aggregate([
+      { $match: { role: "buyer", wishlist: { $in: productIds } } },
+      { $unwind: "$wishlist" },
+      { $match: { wishlist: { $in: productIds } } },
+      {
+        $group: {
+          _id: "$wishlist",
+          wishlistCount: { $sum: 1 },
+        },
+      },
+    ]),
+  ]);
+
+  const purchasesByProductId = new Map(
+    purchaseAgg.map((item) => [String(item._id), Number(item.purchaseCount || 0)])
+  );
+  const wishlistByProductId = new Map(
+    wishlistAgg.map((item) => [String(item._id), Number(item.wishlistCount || 0)])
+  );
+
+  return allRetailerProducts
+    .map((item) => {
+      const purchaseCount = purchasesByProductId.get(String(item._id)) || 0;
+      const wishlistCount = wishlistByProductId.get(String(item._id)) || 0;
+      const popularityScore = purchaseCount + wishlistCount;
+      return { ...item, purchaseCount, wishlistCount, popularityScore };
+    })
+    .sort((left, right) => {
+      if (right.popularityScore !== left.popularityScore) {
+        return right.popularityScore - left.popularityScore;
+      }
+      if (right.purchaseCount !== left.purchaseCount) {
+        return right.purchaseCount - left.purchaseCount;
+      }
+      if (right.wishlistCount !== left.wishlistCount) {
+        return right.wishlistCount - left.wishlistCount;
+      }
+      if (Boolean(right.isAvailable) !== Boolean(left.isAvailable)) {
+        return Number(Boolean(right.isAvailable)) - Number(Boolean(left.isAvailable));
+      }
+      if (Number(right.quantity || 0) !== Number(left.quantity || 0)) {
+        return Number(right.quantity || 0) - Number(left.quantity || 0);
+      }
+      return String(right._id).localeCompare(String(left._id));
+    })
+    .slice(0, Math.max(1, Number(featuredLimit || 4)));
+};
+
 // Home route serves a role-based dashboard for logged-in users.
 export const renderHome = async (req, res) => {
   try {
@@ -71,12 +147,17 @@ export const renderHome = async (req, res) => {
     }
 
     const ownerFilter = { owner: req.user.id };
-    const [totalProducts, inStockProducts, featuredProducts, pendingNotifications, latestHistoryRaw] = await Promise.all([
+    const ownerAggregateFilter = { owner: toObjectIdIfValid(req.user.id) };
+    const [totalProducts, inStockProducts, featuredProducts, pendingNotifications, latestHistoryRaw, averagePriceAgg] = await Promise.all([
       Product.countDocuments(ownerFilter),
       Product.countDocuments({ ...ownerFilter, isAvailable: true }),
-      getFeaturedProducts({ extraMatch: ownerFilter, featuredLimit: 4, candidateLimit: 20 }),
+      getRetailerFeaturedProducts({ retailerId: req.user.id, featuredLimit: 4 }),
       NotificationHistory.countDocuments({ retailer: req.user.id, replied: false }),
       NotificationHistory.find({ retailer: req.user.id }).sort({ createdAt: -1 }).limit(5).lean(),
+      Product.aggregate([
+        { $match: ownerAggregateFilter },
+        { $group: { _id: null, averagePrice: { $avg: { $ifNull: ["$price", 0] } } } },
+      ]),
     ]);
 
     const latestProductIds = [...new Set(latestHistoryRaw.map((item) => String(item.product || "")).filter(Boolean))];
@@ -100,13 +181,7 @@ export const renderHome = async (req, res) => {
     });
 
     const outOfStockProducts = totalProducts - inStockProducts;
-    const averagePrice =
-      featuredProducts.length > 0
-        ? Math.round(
-            featuredProducts.reduce((sum, item) => sum + Number(item.price || 0), 0) /
-              featuredProducts.length
-          )
-        : 0;
+    const averagePrice = Math.round(Number(averagePriceAgg?.[0]?.averagePrice || 0));
 
     return res.render("dashboard", {
       stats: {
