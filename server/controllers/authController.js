@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
 import { logSecurityEvent } from "../middleware/securityEvents.js";
+import { sendWelcomeEmail } from "../services/emailService.js";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -80,6 +81,14 @@ export const register = async (req, res) => {
       email: normalizedEmail,
       password: String(password),
       role: getRoleFromEmail(normalizedEmail),
+    });
+
+    sendWelcomeEmail({
+      to: user.email,
+      name: user.name,
+      role: user.role,
+    }).catch((emailError) => {
+      console.error("Welcome email failed:", emailError.message);
     });
 
     if (wantsHtml(req)) {
