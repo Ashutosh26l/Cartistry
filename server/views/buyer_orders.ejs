@@ -1,0 +1,95 @@
+<%- include("partials/header", { title: "My Orders" }) %>
+
+<section class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 p-6 sm:p-8 mb-8">
+    <div class="absolute -top-12 -right-12 h-44 w-44 rounded-full bg-indigo-400/20 blur-2xl"></div>
+    <div class="absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-cyan-300/20 blur-2xl"></div>
+    <div class="relative">
+      <p class="text-indigo-200 text-sm font-medium">Buyer Dashboard</p>
+      <h1 class="text-3xl sm:text-4xl font-bold text-white mt-1">My Orders</h1>
+      <p class="text-indigo-100 mt-2 text-sm sm:text-base">Track every purchase, payment mode, and shipping details in one place.</p>
+    </div>
+  </div>
+
+  <% if (orders && orders.length > 0) { %>
+  <div class="space-y-5">
+    <% orders.forEach(function(order) { %>
+    <% const status = String(order.status || 'placed'); %>
+    <% const isPlaced = status === 'placed'; %>
+    <% const isCancelled = status === 'cancelled'; %>
+    <% const statusClasses = isPlaced ? 'bg-emerald-100 text-emerald-700' : (isCancelled ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'); %>
+    <article class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-slate-500">Order ID</p>
+          <p class="font-semibold text-slate-900 break-all"><%= order._id %></p>
+          <p class="text-sm text-slate-500 mt-1">Placed on <%= new Date(order.placedAt || order.createdAt).toLocaleString('en-IN') %></p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase <%= statusClasses %>"><%= status %></span>
+          <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold bg-indigo-50 text-indigo-700"><%= String(order.paymentMethod || 'N/A').toUpperCase() %></span>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 rounded-xl border border-slate-200 p-4">
+          <h2 class="text-sm font-semibold text-slate-900 mb-3">Items</h2>
+          <div class="space-y-3">
+            <% (order.items || []).forEach(function(item) { %>
+            <div class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-slate-900 truncate"><%= item.nameSnapshot %></p>
+                <p class="text-xs text-slate-500 mt-1">Qty: <%= item.quantity %> | Unit: &#8377; <%= item.unitPrice %></p>
+              </div>
+              <p class="text-sm font-semibold text-slate-900 whitespace-nowrap">&#8377; <%= item.lineTotal %></p>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+          <h2 class="text-sm font-semibold text-slate-900">Summary</h2>
+          <div class="flex items-center justify-between text-sm text-slate-600">
+            <span>Subtotal</span>
+            <span>&#8377; <%= order.subtotal || 0 %></span>
+          </div>
+          <div class="flex items-center justify-between text-sm text-slate-600">
+            <span>Shipping</span>
+            <span><%= Number(order.shippingFee || 0) > 0 ? ('₹ ' + Number(order.shippingFee || 0)) : 'Free' %></span>
+          </div>
+          <div class="flex items-center justify-between text-sm text-slate-600">
+            <span>Discount</span>
+            <span>- &#8377; <%= order.discount || 0 %></span>
+          </div>
+          <div class="pt-2 border-t border-slate-200 flex items-center justify-between">
+            <span class="font-semibold text-slate-900">Grand Total</span>
+            <span class="text-lg font-bold text-indigo-700">&#8377; <%= order.grandTotal || 0 %></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-xl border border-slate-200 p-4">
+        <h2 class="text-sm font-semibold text-slate-900 mb-2">Shipping Address</h2>
+        <p class="text-sm text-slate-700">
+          <%= order.shippingAddressSnapshot?.fullName || '' %>,
+          <%= order.shippingAddressSnapshot?.addressLine1 || '' %>,
+          <%= order.shippingAddressSnapshot?.city || '' %>,
+          <%= order.shippingAddressSnapshot?.state || '' %> - <%= order.shippingAddressSnapshot?.pincode || '' %>
+        </p>
+        <p class="text-xs text-slate-500 mt-1">
+          Contact: <%= order.shippingAddressSnapshot?.phone || 'N/A' %> | <%= order.shippingAddressSnapshot?.email || 'N/A' %>
+        </p>
+      </div>
+    </article>
+    <% }); %>
+  </div>
+  <% } else { %>
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 sm:p-12 text-center">
+    <h2 class="text-2xl font-bold text-slate-900">No Orders Yet</h2>
+    <p class="text-slate-500 mt-2">Your order history will appear here once you place your first order.</p>
+    <a href="/products/allProducts" class="inline-block mt-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 transition-colors">Start Shopping</a>
+  </div>
+  <% } %>
+</section>
+
+<%- include("partials/footer") %>
