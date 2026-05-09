@@ -419,18 +419,35 @@
           align-items: center;
           justify-content: space-between;
           gap: 10px;
+          flex-wrap: nowrap;
+          overflow: hidden;
         }
         .mobile-nav-links {
           display: inline-flex;
           align-items: center;
-          gap: 14px;
+          gap: 10px;
           min-width: 0;
+          flex: 1 1 auto;
+          overflow: hidden;
+        }
+        .mobile-buyer-greeting {
+          display: inline-block;
+          max-width: 108px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          vertical-align: bottom;
         }
         .mobile-nav-actions {
           display: inline-flex;
           align-items: center;
           gap: 8px;
           margin-left: auto;
+          flex-shrink: 0;
+        }
+        .hamburger-btn {
+          width: 38px;
+          height: 32px;
         }
         .header-menu-layer {
           right: 12px;
@@ -508,7 +525,7 @@
               <% } %>
               <% if (isBuyer) { %>
               <a href="/products/allProducts" class="text-slate-700 hover:text-indigo-600">Shop</a>
-              <span class="text-slate-500 inline">Hi, <%= currentUser.name %></span>
+              <span class="mobile-buyer-greeting text-slate-500 inline">Hi, <%= currentUser.name %></span>
               <% } %>
               </div>
               <div class="mobile-nav-actions">
