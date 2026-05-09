@@ -291,3 +291,17 @@ export const buyNow = async (req, res) => {
   }
 };
 
+export const getBuyerOrdersPage = async (req, res) => {
+  try {
+    const buyerId = req.user?.id;
+    if (!buyerId) return res.status(401).redirect("/auth/login");
+
+    const orders = await Order.find({ buyer: buyerId })
+      .sort({ placedAt: -1, createdAt: -1 })
+      .lean();
+
+    return res.render("buyer_orders", { orders });
+  } catch (error) {
+    return res.status(500).render("error", { statusCode: 500, message: "Unable to load your orders right now" });
+  }
+};
