@@ -6,15 +6,16 @@ import {
   getProducts,
   updateProduct,
 } from "../controllers/productController.js";
+import { publicReadRateLimiter, writeRateLimiter } from "../middleware/rateLimit.js";
 import { validateProduct } from "../middleware/validation.js";
 
 const router = express.Router();
 
 router.use(authMiddleware, requireRetailerApi);
-router.get("/", getProducts);
-router.post("/", validateProduct, createProduct);
-router.put("/:id", validateProduct, updateProduct);
-router.patch("/:id", validateProduct, updateProduct);
-router.delete("/:id", deleteProduct);
+router.get("/", publicReadRateLimiter, getProducts);
+router.post("/", writeRateLimiter, validateProduct, createProduct);
+router.put("/:id", writeRateLimiter, validateProduct, updateProduct);
+router.patch("/:id", writeRateLimiter, validateProduct, updateProduct);
+router.delete("/:id", writeRateLimiter, deleteProduct);
 
 export default router;

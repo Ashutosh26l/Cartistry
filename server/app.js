@@ -14,7 +14,7 @@ import { ensureCsrfToken, verifyCsrfToken } from "./middleware/csrf.js";
 import path from "path";
 import corsMiddleware from "./config/cors.js";
 import { sessionConfig } from "./config/session.js";
-import { authRateLimiter } from "./middleware/rateLimit.js";
+import { authRateLimiter, publicReadRateLimiter } from "./middleware/rateLimit.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandlers.js";
 import { attachFlashMessages } from "./middleware/flashMessages.js";
 import { attachBuyerNotificationCount, attachRetailerNotificationCount } from "./middleware/retailerNotifications.js";
@@ -86,7 +86,7 @@ app.use("/auth", authRateLimiter, verifyCsrfToken, authRoutes);
 app.use("/api/products", productApiRoutes);
 app.use("/products", verifyCsrfToken, productRoutes);
 app.use(verifyCsrfToken, retailerRoutes);
-app.use(siteRoutes);
+app.use(publicReadRateLimiter, siteRoutes);
 // 404 handler for unmatched routes.
 app.use(notFoundHandler);
 // Centralized error handler.
