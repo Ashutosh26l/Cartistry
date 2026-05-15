@@ -1,5 +1,6 @@
 import express from "express";
 import { requireAuthPage, requireRetailerPage } from "../middleware/auth.js";
+import { bulkOperationRateLimiter, publicReadRateLimiter, writeRateLimiter } from "../middleware/rateLimit.js";
 import {
   applyBulkEditChanges,
   commitBulkUpload,
@@ -24,22 +25,21 @@ const router = express.Router();
 router.use("/retailer", requireAuthPage, requireRetailerPage, ensureRetailerPreferencesRecord);
 router.use("/api/retailer", requireAuthPage, requireRetailerPage, ensureRetailerPreferencesRecord);
 
-router.get("/retailer/analytics", getRetailerAnalyticsPage);
-router.get("/retailer/bulk/upload", getBulkUploadPage);
-router.get("/retailer/bulk/template.csv", downloadBulkCsvTemplate);
-router.post("/retailer/bulk/upload/preview", previewBulkUpload);
-router.post("/retailer/bulk/upload/commit", commitBulkUpload);
-router.get("/retailer/bulk/edit", getBulkEditPage);
-router.post("/retailer/bulk/edit/preview", previewBulkEdit);
-router.post("/retailer/bulk/edit/apply", applyBulkEditChanges);
-router.get("/retailer/notification-preferences", getNotificationPreferencesPage);
-router.post("/retailer/notification-preferences", updateNotificationPreferences);
+router.get("/retailer/analytics", publicReadRateLimiter, getRetailerAnalyticsPage);
+router.get("/retailer/bulk/upload", publicReadRateLimiter, getBulkUploadPage);
+router.get("/retailer/bulk/template.csv", publicReadRateLimiter, downloadBulkCsvTemplate);
+router.post("/retailer/bulk/upload/preview", bulkOperationRateLimiter, previewBulkUpload);
+router.post("/retailer/bulk/upload/commit", bulkOperationRateLimiter, commitBulkUpload);
+router.get("/retailer/bulk/edit", publicReadRateLimiter, getBulkEditPage);
+router.post("/retailer/bulk/edit/preview", bulkOperationRateLimiter, previewBulkEdit);
+router.post("/retailer/bulk/edit/apply", bulkOperationRateLimiter, applyBulkEditChanges);
+router.get("/retailer/notification-preferences", publicReadRateLimiter, getNotificationPreferencesPage);
+router.post("/retailer/notification-preferences", writeRateLimiter, updateNotificationPreferences);
 
-router.get("/api/retailer/analytics/overview", getRetailerAnalyticsOverviewApi);
-router.get("/api/retailer/analytics/top-products", getRetailerTopProductsApi);
-router.get("/api/retailer/analytics/conversion", getRetailerConversionApi);
-router.get("/api/retailer/notification-preferences", getNotificationPreferencesApi);
-router.patch("/api/retailer/notification-preferences", patchNotificationPreferencesApi);
+router.get("/api/retailer/analytics/overview", publicReadRateLimiter, getRetailerAnalyticsOverviewApi);
+router.get("/api/retailer/analytics/top-products", publicReadRateLimiter, getRetailerTopProductsApi);
+router.get("/api/retailer/analytics/conversion", publicReadRateLimiter, getRetailerConversionApi);
+router.get("/api/retailer/notification-preferences", publicReadRateLimiter, getNotificationPreferencesApi);
+router.patch("/api/retailer/notification-preferences", writeRateLimiter, patchNotificationPreferencesApi);
 
 export default router;
-
