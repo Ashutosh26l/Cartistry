@@ -1,4 +1,4 @@
-# Ecommerce (Sem-6)
+# Cartistry
 
 Updated role-based ecommerce platform built with **Node.js + Express 5 + MongoDB + EJS**.
 
@@ -58,7 +58,7 @@ The codebase supports both:
 ## Project Structure
 
 ```text
-Ecommerce(sem-6)/
+Cartistry/
 |-- server/
 |   |-- app.js
 |   |-- index.js
@@ -257,3 +257,4 @@ Notes:
 
 ## License
 ISC (as defined in `server/package.json`)
+
