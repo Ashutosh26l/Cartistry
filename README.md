@@ -50,6 +50,7 @@ The codebase supports both:
 - Offline-safe notification persistence in `notificationHistory` (combined history model)
 - Retailer analytics dashboard + analytics APIs (overview, top products, conversion)
 - Retailer bulk product upload via CSV (preview + commit) and bulk edit operations
+- Retailer product images via URL input and direct file upload (PNG/JPEG/WEBP) to Cloudinary
 - Retailer notification preferences (page + API patch)
 - Flash messages for UX feedback
 - Theme toggle + frontend behavior scripts
@@ -208,6 +209,11 @@ SMTP_PORT=
 SMTP_USER=
 SMTP_PASS=
 SMTP_FROM=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_PRODUCT_FOLDER=cartistry/products
+PRODUCT_IMAGE_MAX_BYTES=5242880
 ```
 
 Notes:

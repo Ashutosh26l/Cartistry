@@ -1,5 +1,5 @@
 import Product from "../../models/productModel.js";
-import { getOwnerFilter, normalizeCreatePayload, normalizeUpdatePayload } from "./productShared.js";
+import { attachUploadedProductImages, getOwnerFilter, normalizeCreatePayload, normalizeUpdatePayload } from "./productShared.js";
 
 export const getProducts = async (req, res) => {
   try {
@@ -18,6 +18,12 @@ export const createProduct = async (req, res) => {
     }
 
     const payload = normalizeCreatePayload(req.body);
+    await attachUploadedProductImages({
+      req,
+      payload,
+      ownerId: req.user.id,
+      productName: payload.name,
+    });
     const product = await Product.create({
       ...payload,
       owner: req.user.id,
@@ -25,6 +31,10 @@ export const createProduct = async (req, res) => {
 
     return res.status(201).json(product);
   } catch (error) {
+    const uploadConfigIssue = /Image upload is not configured|Cloudinary/i.test(String(error.message || ""));
+    if (uploadConfigIssue) {
+      return res.status(400).json({ message: String(error.message) });
+    }
     return res.status(500).json({ message: "Failed to create product" });
   }
 };
@@ -42,11 +52,22 @@ export const updateProduct = async (req, res) => {
       return res.status(403).json({ message: "Forbidden: not your product" });
     }
 
-    Object.assign(product, normalizeUpdatePayload(req.body));
+    const payload = normalizeUpdatePayload(req.body);
+    await attachUploadedProductImages({
+      req,
+      payload,
+      ownerId: req.user.id,
+      productName: payload.name || product.name,
+    });
+    Object.assign(product, payload);
     await product.save();
 
     return res.status(200).json(product);
   } catch (error) {
+    const uploadConfigIssue = /Image upload is not configured|Cloudinary/i.test(String(error.message || ""));
+    if (uploadConfigIssue) {
+      return res.status(400).json({ message: String(error.message) });
+    }
     return res.status(500).json({ message: "Failed to update product" });
   }
 };

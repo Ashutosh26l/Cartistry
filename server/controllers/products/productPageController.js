@@ -5,6 +5,7 @@ import {
   ALLOWED_SORTS,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
+  attachUploadedProductImages,
   buildGalleryImages,
   escapeRegex,
   getAvailabilityQuery,
@@ -194,13 +195,23 @@ export const updateProductPage = async (req, res) => {
       return res.status(403).send("Forbidden");
     }
 
-    Object.assign(product, normalizeUpdatePayload(req.body));
+    const payload = normalizeUpdatePayload(req.body);
+    await attachUploadedProductImages({
+      req,
+      payload,
+      ownerId: req.user.id,
+      productName: payload.name || product.name,
+    });
+    Object.assign(product, payload);
     await product.save();
     req.flash("success", "Product updated successfully.");
     return res.redirect(`/products/${product._id}`);
   } catch (error) {
-    req.flash("error", "Product could not be edited");
-    return res.status(500).render("error", { statusCode: 500, message: "Unable to update product" });
+    const uploadConfigIssue = /Image upload is not configured|Cloudinary/i.test(String(error.message || ""));
+    const statusCode = uploadConfigIssue ? 400 : 500;
+    const message = uploadConfigIssue ? String(error.message) : "Unable to update product";
+    req.flash("error", message);
+    return res.status(statusCode).render("error", { statusCode, message });
   }
 };
 
@@ -235,6 +246,12 @@ export const createProductPage = async (req, res) => {
     }
 
     const payload = normalizeCreatePayload(req.body);
+    await attachUploadedProductImages({
+      req,
+      payload,
+      ownerId: req.user.id,
+      productName: payload.name,
+    });
     await Product.create({
       ...payload,
       owner: req.user.id,
@@ -242,7 +259,10 @@ export const createProductPage = async (req, res) => {
     req.flash("success", "Product added successfully");
     return res.redirect("/products/allProducts");
   } catch (error) {
-    req.flash("error", "Product could not be added");
-    return res.status(500).render("error", { statusCode: 500, message: "Unable to add product" });
+    const uploadConfigIssue = /Image upload is not configured|Cloudinary/i.test(String(error.message || ""));
+    const statusCode = uploadConfigIssue ? 400 : 500;
+    const message = uploadConfigIssue ? String(error.message) : "Unable to add product";
+    req.flash("error", message);
+    return res.status(statusCode).render("error", { statusCode, message });
   }
 };

@@ -25,6 +25,7 @@ product || {}; %>
         class="mt-8 space-y-5 needs-validation"
         method="POST"
         action="/products/edit/<%= p._id %>"
+        enctype="multipart/form-data"
         data-unsaved-tracker="true"
         data-cancel-target=".js-cancel-edit"
         novalidate
@@ -143,10 +144,34 @@ product || {}; %>
               value="<%= p.image || '' %>"
               class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 outline-none focus:border-indigo-500"
             />
+            <p class="mt-1 text-xs text-slate-500">You can keep using existing image URLs, including Unsplash URLs.</p>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Primary Image Upload (PNG/JPEG/WEBP)</label>
+            <input
+              type="file"
+              name="imageFile"
+              accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+              class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500"
+            />
+            <p class="mt-1 text-xs text-slate-500">If selected, this file replaces primary image URL.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <p class="block text-sm font-medium text-slate-700">Stock Status</p>
             <p class="mt-2 text-sm px-3 py-2 rounded-lg border border-slate-200 inline-block <%= p.stockStatus === 'In Stock' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' %>"><%= p.stockStatus || (p.isAvailable ? 'In Stock' : 'Out of Stock') %></p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Gallery Image Uploads (PNG/JPEG/WEBP)</label>
+            <input
+              type="file"
+              name="galleryFiles"
+              multiple
+              accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+              class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500"
+            />
           </div>
         </div>
 
