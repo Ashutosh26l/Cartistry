@@ -24,6 +24,7 @@ import {
   updateProductPage,
 } from "../controllers/productController.js";
 import { requireAuthPage, requireBuyerPage, requireRetailerPage } from "../middleware/auth.js";
+import { handleProductImageUpload } from "../middleware/upload.js";
 import {
   cartCheckoutRateLimiter,
   publicReadRateLimiter,
@@ -42,9 +43,9 @@ router.post("/notifications/:notificationId/read", writeRateLimiter, requireReta
 router.post("/:id/reviews", writeRateLimiter, requireBuyerPage, validateReview, addProductReview);
 router.post("/:id/reviews/:reviewIndex/reply", writeRateLimiter, requireRetailerPage, validateReviewReply, replyToReview);
 router.get("/new", requireRetailerPage, getAddProductPage);
-router.post("/new", writeRateLimiter, requireRetailerPage, validateProduct, createProductPage);
+router.post("/new", writeRateLimiter, requireRetailerPage, handleProductImageUpload, validateProduct, createProductPage);
 router.get("/edit/:id", requireRetailerPage, getEditProductPage);
-router.post("/edit/:id", writeRateLimiter, requireRetailerPage, validateProduct, updateProductPage);
+router.post("/edit/:id", writeRateLimiter, requireRetailerPage, handleProductImageUpload, validateProduct, updateProductPage);
 router.post("/:id/delete", writeRateLimiter, requireRetailerPage, deleteProductPage);
 router.get("/cart", requireBuyerPage, getCartPage);
 router.get("/orders", requireBuyerPage, getBuyerOrdersPage);

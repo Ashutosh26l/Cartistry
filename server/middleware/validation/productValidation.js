@@ -1,5 +1,5 @@
 import Joi from "joi";
-import { buildMessage } from "./helpers.js";
+import { buildMessage, dedupeCaseInsensitive, normalizeListInput, normalizeVariants } from "./helpers.js";
 
 export const productSchema = Joi.object({
   name: Joi.string().trim().min(2).required(),
@@ -36,6 +36,21 @@ export const validateProduct = (req, res, next) => {
       message: buildMessage(error.details),
     });
   }
-  req.body = value;
+
+  const imagesInput = typeof value.galleryImages !== "undefined" ? value.galleryImages : value.images;
+  const normalizedImages = dedupeCaseInsensitive(normalizeListInput(imagesInput));
+  const variantsBase = normalizeVariants(value.variants);
+  const sizeInput = typeof value.variantSizes !== "undefined" ? value.variantSizes : variantsBase.sizes;
+  const colorInput = typeof value.variantColors !== "undefined" ? value.variantColors : variantsBase.colors;
+
+  req.body = {
+    ...value,
+    images: normalizedImages,
+    variants: {
+      sizes: dedupeCaseInsensitive(normalizeListInput(sizeInput)),
+      colors: dedupeCaseInsensitive(normalizeListInput(colorInput)),
+    },
+  };
+
   return next();
 };

@@ -1,3 +1,5 @@
+import { isCloudinaryConfigured, uploadImageBufferToCloudinary } from "../../services/cloudinaryService.js";
+
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isNaN(parsed) ? fallback : parsed;
@@ -226,8 +228,68 @@ const getCheckoutPricing = (cartItems) => {
   return { subtotal, shipping, finalTotal };
 };
 
+const getUploadedFileList = (files, fieldName) => {
+  if (!files || typeof files !== "object") return [];
+  const value = files[fieldName];
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => item && Buffer.isBuffer(item.buffer) && item.buffer.length > 0);
+};
+
+const uploadImagesToCloudinary = async ({ files, ownerId, productName, slotPrefix }) => {
+  const uploads = files.map((file, index) =>
+    uploadImageBufferToCloudinary({
+      buffer: file.buffer,
+      mimetype: String(file.mimetype || "image/jpeg"),
+      ownerId,
+      productName,
+      variant: `${slotPrefix}-${index + 1}`,
+    })
+  );
+  const uploaded = await Promise.all(uploads);
+  return sanitizeList(uploaded.map((item) => item.secureUrl));
+};
+
+const attachUploadedProductImages = async ({ req, payload, ownerId, productName }) => {
+  const primaryFiles = getUploadedFileList(req.files, "imageFile");
+  const galleryFiles = getUploadedFileList(req.files, "galleryFiles");
+  if (primaryFiles.length === 0 && galleryFiles.length === 0) return;
+
+  if (!isCloudinaryConfigured()) {
+    throw new Error(
+      "Image upload is not configured yet. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET."
+    );
+  }
+
+  const primaryUrlFromText = String(payload.image || "").trim();
+  const galleryUrlsFromText = sanitizeList(payload.images);
+  const uploadedGalleryUrls = await uploadImagesToCloudinary({
+    files: galleryFiles,
+    ownerId,
+    productName,
+    slotPrefix: "gallery",
+  });
+
+  if (primaryFiles.length > 0) {
+    const [primaryUpload] = await uploadImagesToCloudinary({
+      files: [primaryFiles[0]],
+      ownerId,
+      productName,
+      slotPrefix: "primary",
+    });
+    if (primaryUpload) {
+      payload.image = primaryUpload;
+      if (primaryUrlFromText && primaryUrlFromText.toLowerCase() !== primaryUpload.toLowerCase()) {
+        galleryUrlsFromText.push(primaryUrlFromText);
+      }
+    }
+  }
+
+  payload.images = sanitizeList([...galleryUrlsFromText, ...uploadedGalleryUrls]);
+};
+
 export {
   ALLOWED_SORTS,
+  attachUploadedProductImages,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
   buildGalleryImages,
