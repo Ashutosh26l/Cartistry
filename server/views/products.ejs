@@ -27,12 +27,13 @@
   .price-range {
     --min-position: 0%;
     --max-position: 100%;
+    --thumb-safe-inset: 11px;
     position: relative;
   }
   .price-range-track {
     position: absolute;
-    left: 0;
-    right: 0;
+    left: var(--thumb-safe-inset);
+    right: var(--thumb-safe-inset);
     top: 50%;
     height: 6px;
     transform: translateY(-50%);
@@ -51,13 +52,28 @@
   }
   .price-range-input {
     position: absolute;
-    inset: 0;
-    width: 100%;
+    top: 0;
+    bottom: 0;
+    left: var(--thumb-safe-inset);
+    right: var(--thumb-safe-inset);
+    width: auto;
     height: 44px;
     margin: 0;
     appearance: none;
     background: transparent;
+    border: 0;
     pointer-events: none;
+  }
+  .price-range-input::-webkit-slider-runnable-track {
+    height: 6px;
+    background: transparent;
+    border: 0;
+  }
+  [data-price-min-range] {
+    z-index: 3;
+  }
+  [data-price-max-range] {
+    z-index: 3;
   }
   .price-range-input::-webkit-slider-thumb {
     width: 22px;
@@ -83,20 +99,86 @@
   .price-range-input::-moz-range-track {
     background: transparent;
   }
-  html.dark .price-range-track {
-    background: #23324a;
+  :root.dark .price-range-track,
+  html.dark .price-range-track,
+  body.dark .price-range-track {
+    background: linear-gradient(180deg, #0a1730, #0f2240);
+    border: 1px solid rgba(125, 211, 252, 0.24);
+    box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.15);
   }
-  html.dark .price-range-card {
-    border-color: #2b3a55 !important;
-    background-color: rgba(8, 145, 178, 0.12) !important;
+  :root.dark .price-range-card,
+  html.dark .price-range-card,
+  body.dark .price-range-card {
+    border-color: rgba(125, 211, 252, 0.28) !important;
+    background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), rgba(15, 23, 42, 0.45) 52%), #0f223b !important;
+    box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.08);
   }
-  html.dark .price-range-input::-webkit-slider-thumb {
-    border-color: #0b1220;
-    background: #67e8f9;
+  :root.dark [data-min-price-label],
+  :root.dark [data-max-price-label],
+  html.dark [data-min-price-label],
+  html.dark [data-max-price-label],
+  body.dark [data-min-price-label],
+  body.dark [data-max-price-label] {
+    color: #d6eeff !important;
+    letter-spacing: 0.01em;
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.16);
   }
-  html.dark .price-range-input::-moz-range-thumb {
-    border-color: #0b1220;
-    background: #67e8f9;
+  :root.dark .price-range-input::-webkit-slider-thumb,
+  html.dark .price-range-input::-webkit-slider-thumb,
+  body.dark .price-range-input::-webkit-slider-thumb {
+    border-color: #082034;
+    background: radial-gradient(circle at 35% 30%, #a5f3fc 0%, #67e8f9 58%, #22d3ee 100%);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2), 0 10px 22px rgba(8, 145, 178, 0.35);
+  }
+  :root.dark .price-range-input::-moz-range-thumb,
+  html.dark .price-range-input::-moz-range-thumb,
+  body.dark .price-range-input::-moz-range-thumb {
+    border-color: #082034;
+    background: radial-gradient(circle at 35% 30%, #a5f3fc 0%, #67e8f9 58%, #22d3ee 100%);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2), 0 10px 22px rgba(8, 145, 178, 0.35);
+  }
+  :root.dark .price-range-input,
+  html.dark .price-range-input,
+  body.dark .price-range-input {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  :root.dark [data-price-min-range]::-webkit-slider-thumb,
+  html.dark [data-price-min-range]::-webkit-slider-thumb,
+  body.dark [data-price-min-range]::-webkit-slider-thumb {
+    border-color: #f8fafc;
+    background: radial-gradient(circle at 35% 30%, #fde68a 0%, #f59e0b 58%, #d97706 100%);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25), 0 10px 22px rgba(180, 83, 9, 0.4);
+  }
+  :root.dark [data-price-min-range]::-moz-range-thumb,
+  html.dark [data-price-min-range]::-moz-range-thumb,
+  body.dark [data-price-min-range]::-moz-range-thumb {
+    border-color: #f8fafc;
+    background: radial-gradient(circle at 35% 30%, #fde68a 0%, #f59e0b 58%, #d97706 100%);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25), 0 10px 22px rgba(180, 83, 9, 0.4);
+  }
+  :root.dark .price-range-track::after,
+  html.dark .price-range-track::after,
+  body.dark .price-range-track::after {
+    background: linear-gradient(90deg, #22d3ee, #38bdf8 40%, #60a5fa 100%);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) .price-range-track {
+      background: linear-gradient(180deg, #0a1730, #0f2240);
+      border: 1px solid rgba(125, 211, 252, 0.24);
+      box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.15);
+    }
+    :root:not(.light) .price-range-card {
+      border-color: rgba(125, 211, 252, 0.28) !important;
+      background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), rgba(15, 23, 42, 0.45) 52%), #0f223b !important;
+      box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.08);
+    }
+    :root:not(.light) .price-range-track::after {
+      background: linear-gradient(90deg, #22d3ee, #38bdf8 40%, #60a5fa 100%);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+    }
   }
   .product-image {
     transition: transform 450ms ease;
@@ -504,6 +586,16 @@ const currentQueryPath = queryForLink(pager.page || 1);
       const priceFormatter = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
 
       const clamp = (value) => Math.min(upperLimit, Math.max(lowerLimit, Number(value) || 0));
+      const bringThumbToFront = (thumb) => {
+        if (!minRange || !maxRange) return;
+        if (thumb === "min") {
+          minRange.style.zIndex = "5";
+          maxRange.style.zIndex = "4";
+        } else {
+          maxRange.style.zIndex = "5";
+          minRange.style.zIndex = "4";
+        }
+      };
       const updatePriceRange = (source) => {
         if (!minRange || !maxRange || !minInput || !maxInput) return;
         let minValue = clamp(source === "minInput" ? minInput.value : minRange.value);
@@ -527,12 +619,26 @@ const currentQueryPath = queryForLink(pager.page || 1);
         priceRange.style.setProperty("--max-position", `${((maxValue - lowerLimit) / span) * 100}%`);
         if (minLabel) minLabel.textContent = `\u20b9 ${priceFormatter.format(minValue)}`;
         if (maxLabel) maxLabel.textContent = `\u20b9 ${priceFormatter.format(maxValue)}`;
+
+        // When thumbs overlap/come close, keep the actively edited thumb on top.
+        if (source === "minRange" || source === "minInput") {
+          bringThumbToFront("min");
+        } else if (source === "maxRange" || source === "maxInput") {
+          bringThumbToFront("max");
+        }
       };
 
+      minRange?.addEventListener("pointerdown", () => bringThumbToFront("min"));
+      maxRange?.addEventListener("pointerdown", () => bringThumbToFront("max"));
+      minRange?.addEventListener("mousedown", () => bringThumbToFront("min"));
+      maxRange?.addEventListener("mousedown", () => bringThumbToFront("max"));
+      minRange?.addEventListener("touchstart", () => bringThumbToFront("min"), { passive: true });
+      maxRange?.addEventListener("touchstart", () => bringThumbToFront("max"), { passive: true });
       minRange?.addEventListener("input", () => updatePriceRange("minRange"));
       maxRange?.addEventListener("input", () => updatePriceRange("maxRange"));
       minInput?.addEventListener("input", () => updatePriceRange("minInput"));
       maxInput?.addEventListener("input", () => updatePriceRange("maxInput"));
+      bringThumbToFront("max");
       updatePriceRange("init");
     }
 
