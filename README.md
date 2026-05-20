@@ -10,7 +10,7 @@ This is a server-rendered ecommerce app with two active roles:
 
 The codebase supports both:
 - HTML page routes (`/auth/*`, `/products/*`, etc.)
-- JSON API routes (`/api/auth/*`, `/api/products/*`, `/api/health`)
+- JSON API routes (`/api/auth/*`, `/api/products/*`, `/api/health`) 
 
 ## Updated Tech Stack
 
